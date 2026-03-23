@@ -36,7 +36,7 @@ game-finder/
 ### Workspace configuration
 
 - `pnpm-workspace.yaml` defines `apps/*` and `packages/*`
-- `turbo.json` configures `build`, `dev`, `lint`, `typecheck`, and `test` pipelines
+- `turbo.json` configures `build`, `dev`, `lint`, `format`, `typecheck`, and `test` pipelines
 - Base `tsconfig.json` at root; each package/app extends it
 - Internal packages use workspace protocol (`"@game-finder/db": "workspace:*"`)
 
@@ -105,8 +105,7 @@ game-finder/
 
 ## Dev Tooling
 
-- **ESLint** with TypeScript rules (root flat config shared across all packages)
-- **Prettier** is not included in this epic
+- **Biome** for linting and formatting (single tool, root config shared across all packages)
 - **Vitest** as the test runner across all packages
 - Turborepo `test` pipeline: `pnpm test` runs tests across all packages
 - `.env.example` documenting all required env vars
@@ -120,5 +119,5 @@ game-finder/
 4. Web app successfully calls the server's tRPC `health.check` and displays the result
 5. Web app imports and renders a component from `@game-finder/ui`
 6. DB connection works (server can connect to Postgres)
-7. `pnpm build`, `pnpm lint`, `pnpm typecheck`, and `pnpm test` pass across all packages
+7. `pnpm build`, `pnpm lint`, `pnpm format`, `pnpm typecheck`, and `pnpm test` pass across all packages
 8. Server health check endpoint has a passing test
