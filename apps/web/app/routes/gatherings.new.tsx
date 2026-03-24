@@ -2,6 +2,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { GatheringForm } from '../components/gathering-form.js'
+import { MapBackground } from '../components/map-background.js'
 import { useTRPC } from '../trpc/provider.js'
 
 export default function NewGathering() {
@@ -21,12 +22,9 @@ export default function NewGathering() {
 
   return (
     <div className="relative min-h-[calc(100vh-65px)]">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-1/2 top-1/3 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary opacity-[0.03] blur-[100px]" />
-        <div className="absolute inset-0 bg-noise" />
-      </div>
+      <MapBackground />
 
-    <div className="relative mx-auto max-w-3xl px-4 py-10">
+    <div className="relative z-10 mx-auto max-w-4xl px-6 py-10">
       <GatheringForm
         submitLabel="Create Gathering"
         isPending={createMutation.isPending}
