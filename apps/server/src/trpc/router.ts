@@ -1,4 +1,6 @@
 import { authRouter } from './auth.js'
+import { gameRouter } from './game.js'
+import { gatheringRouter } from './gathering.js'
 import { createRouter, publicProcedure } from './init.js'
 
 export const appRouter = createRouter({
@@ -8,6 +10,8 @@ export const appRouter = createRouter({
     }),
   }),
   auth: authRouter,
+  game: gameRouter,
+  gathering: gatheringRouter,
 })
 
 export type AppRouter = typeof appRouter

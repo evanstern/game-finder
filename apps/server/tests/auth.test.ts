@@ -1,20 +1,13 @@
-import { afterAll, afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import {
   cleanup,
   createAuthenticatedCaller,
   createTestCaller,
   createTestUser,
-  db,
-  redis,
 } from './helpers.js'
 
 afterEach(async () => {
   await cleanup()
-})
-
-afterAll(async () => {
-  await db.destroy()
-  redis.disconnect()
 })
 
 describe('auth.register', () => {

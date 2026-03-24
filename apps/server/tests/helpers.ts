@@ -45,7 +45,19 @@ export async function createAuthenticatedCaller(userId: string) {
   return createTestCaller(`session_id=${sessionId}`)
 }
 
+export async function seedGames() {
+  const games = [
+    { name: 'Catan', type: 'board_game' as const, description: 'Trade and build.', min_players: 3, max_players: 4 },
+    { name: 'D&D 5e', type: 'ttrpg' as const, description: 'Classic TTRPG.', min_players: 3, max_players: 6 },
+    { name: 'Magic: The Gathering', type: 'card_game' as const, description: 'Card battler.', min_players: 2, max_players: 4 },
+  ]
+  return db.insertInto('game').values(games).returningAll().execute()
+}
+
 export async function cleanup() {
+  await db.deleteFrom('gathering_game').execute()
+  await db.deleteFrom('gathering').execute()
+  await db.deleteFrom('game').execute()
   await db.deleteFrom('users').execute()
   const keys = await redis.keys('session:*')
   if (keys.length > 0) await redis.del(...keys)
