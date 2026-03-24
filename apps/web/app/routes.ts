@@ -8,4 +8,5 @@ export default [
   route('gatherings/new', 'routes/gatherings.new.tsx'),
   route('gatherings/:id', 'routes/gatherings.$id.tsx'),
   route('gatherings/:id/edit', 'routes/gatherings.$id.edit.tsx'),
+  route('search', 'routes/search.tsx'),
 ] satisfies RouteConfig
