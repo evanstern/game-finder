@@ -4,4 +4,8 @@ export default [
   index('routes/home.tsx'),
   route('signup', 'routes/signup.tsx'),
   route('login', 'routes/login.tsx'),
+  route('dashboard', 'routes/dashboard.tsx'),
+  route('gatherings/new', 'routes/gatherings.new.tsx'),
+  route('gatherings/:id', 'routes/gatherings.$id.tsx'),
+  route('gatherings/:id/edit', 'routes/gatherings.$id.edit.tsx'),
 ] satisfies RouteConfig

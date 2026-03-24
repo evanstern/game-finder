@@ -56,6 +56,12 @@ export function Nav() {
               <span className="text-sm font-medium text-primary">
                 {user.displayName}
               </span>
+              <Link
+                to="/dashboard"
+                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Dashboard
+              </Link>
               <button
                 type="button"
                 onClick={() => logoutMutation.mutate()}
