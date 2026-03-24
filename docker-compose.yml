@@ -33,6 +33,8 @@ services:
     environment:
       DB_HOST: postgres
       PORT: "4000"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
     volumes:
       - .:/app
       - /app/node_modules
@@ -45,6 +47,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_started
 
   web:
     build:
