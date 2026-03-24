@@ -1,7 +1,6 @@
 import { Badge } from '@game-finder/ui/components/badge'
 import { Button } from '@game-finder/ui/components/button'
 import { Card, CardContent } from '@game-finder/ui/components/card'
-import { Checkbox } from '@game-finder/ui/components/checkbox'
 import { Input } from '@game-finder/ui/components/input'
 import { Label } from '@game-finder/ui/components/label'
 import {
@@ -223,22 +222,19 @@ export default function SearchPage() {
                 <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Game Type
                 </h3>
-                <div className="space-y-2">
+                <div className="flex flex-col gap-1">
                   {(
                     Object.entries(GAME_TYPE_LABELS) as [GameType, string][]
                   ).map(([type, label]) => (
-                    <label
+                    <Button
                       key={type}
-                      className="flex cursor-pointer items-center gap-2"
+                      variant={urlTypes?.includes(type) ? 'secondary' : 'ghost'}
+                      size="sm"
+                      className={urlTypes?.includes(type) ? 'justify-start text-primary' : 'justify-start text-muted-foreground'}
+                      onClick={() => toggleGameType(type)}
                     >
-                      <Checkbox
-                        checked={urlTypes?.includes(type) ?? false}
-                        onCheckedChange={() => toggleGameType(type)}
-                      />
-                      <span className="text-sm text-foreground">
-                        {label}
-                      </span>
-                    </label>
+                      {label}
+                    </Button>
                   ))}
                 </div>
               </div>
