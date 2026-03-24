@@ -5,7 +5,10 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./auth": "./src/auth.ts"
+    "./auth": "./src/auth.ts",
+    "./gathering": "./src/gathering.ts",
+    "./game": "./src/game.ts",
+    "./search": "./src/search.ts"
   },
   "scripts": {
     "lint": "biome check .",

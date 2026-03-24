@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <defs>
+    <rect id="die" width="26" height="26" rx="5" fill="#ffbf47"/>
+  </defs>
+  <g transform="rotate(-5 16 16)">
+    <use href="#die" x="3" y="3"/>
+    <!-- Corner pips at 30% opacity -->
+    <circle cx="9" cy="9" r="1.8" fill="#0a1628" opacity="0.3"/>
+    <circle cx="23" cy="23" r="1.8" fill="#0a1628" opacity="0.3"/>
+    <!-- "gf" text -->
+    <text x="16" y="21" text-anchor="middle" fill="#0a1628"
+          font-family="system-ui, sans-serif" font-weight="900" font-size="16">gf</text>
+  </g>
+</svg>

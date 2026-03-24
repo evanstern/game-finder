@@ -1,32 +1,14 @@
-import { Button } from '@game-finder/ui/components/button'
+import { Logo } from '@game-finder/ui/components/logo'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useTRPC } from '../trpc/provider.js'
-
-function D20Icon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5" />
-      <line x1="12" y1="2" x2="12" y2="22" />
-      <line x1="2" y1="8.5" x2="22" y2="8.5" />
-      <line x1="2" y1="15.5" x2="12" y2="2" />
-      <line x1="22" y1="15.5" x2="12" y2="2" />
-    </svg>
-  )
-}
 
 export function Nav() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const { data: user, isLoading } = useQuery(trpc.auth.me.queryOptions())
 
@@ -42,13 +24,24 @@ export function Nav() {
   return (
     <nav className="border-b border-border bg-card/80 backdrop-blur-md">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-        <Link to="/" className="group flex items-center gap-2">
-          <D20Icon className="h-4.5 w-4.5 text-primary transition-transform duration-300 group-hover:rotate-[60deg]" />
-          <span className="font-display text-base tracking-wide text-foreground">
-            Game Finder
-          </span>
+        <Link to="/" className="flex items-center">
+          <Logo size="sm" />
         </Link>
-        <div className="flex items-center gap-5">
+        <button
+          type="button"
+          className="md:hidden text-muted-foreground"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          aria-label="Toggle menu"
+        >
+          {mobileMenuOpen ? '✕' : '☰'}
+        </button>
+        <div className="hidden md:flex items-center gap-5">
+          <Link to="/search" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+            Find Games
+          </Link>
+          <Link to="#" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+            Post a Game
+          </Link>
           {isLoading ? (
             <div className="h-3.5 w-20 animate-pulse rounded bg-muted" />
           ) : user ? (
@@ -56,6 +49,12 @@ export function Nav() {
               <span className="text-sm font-medium text-primary">
                 {user.displayName}
               </span>
+              <Link
+                to="/dashboard"
+                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Dashboard
+              </Link>
               <button
                 type="button"
                 onClick={() => logoutMutation.mutate()}
@@ -73,13 +72,39 @@ export function Nav() {
               >
                 Log In
               </Link>
-              <Button size="default" asChild>
-                <Link to="/signup">Sign Up</Link>
-              </Button>
+              <Link
+                to="/signup"
+                className="text-sm font-semibold text-primary"
+              >
+                Sign Up
+              </Link>
             </>
           )}
         </div>
       </div>
+      {mobileMenuOpen && (
+        <div className="md:hidden border-t border-border bg-card/95 backdrop-blur-md px-6 py-4 flex flex-col gap-3">
+          <Link to="/search" className="text-sm text-muted-foreground" onClick={() => setMobileMenuOpen(false)}>Find Games</Link>
+          <Link to="#" className="text-sm text-muted-foreground" onClick={() => setMobileMenuOpen(false)}>Post a Game</Link>
+          {user ? (
+            <>
+              <span className="text-sm font-medium text-primary">{user.displayName}</span>
+              <button
+                type="button"
+                onClick={() => { logoutMutation.mutate(); setMobileMenuOpen(false) }}
+                className="text-sm text-muted-foreground text-left"
+              >
+                Log Out
+              </button>
+            </>
+          ) : (
+            <>
+              <Link to="/login" className="text-sm text-muted-foreground" onClick={() => setMobileMenuOpen(false)}>Log In</Link>
+              <Link to="/signup" className="text-sm text-primary font-semibold" onClick={() => setMobileMenuOpen(false)}>Sign Up</Link>
+            </>
+          )}
+        </div>
+      )}
     </nav>
   )
 }
