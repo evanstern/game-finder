@@ -8,6 +8,7 @@ import {
   ScrollRestoration,
 } from 'react-router'
 import type { Route } from './+types/root.js'
+import { Nav } from './components/nav.js'
 import { TRPCReactProvider } from './trpc/provider.js'
 
 export function loader({ context }: Route.LoaderArgs) {
@@ -36,6 +37,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 export default function Root({ loaderData }: Route.ComponentProps) {
   return (
     <TRPCReactProvider ssrCookie={loaderData.cookie}>
+      <Nav />
       <Suspense fallback={<div>Loading...</div>}>
         <Outlet />
       </Suspense>
