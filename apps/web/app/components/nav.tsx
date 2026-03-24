@@ -42,7 +42,7 @@ export function Nav() {
           <Link to="/search" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
             Find Games
           </Link>
-          <Link to="#" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+          <Link to="/gatherings/new" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
             Post a Game
           </Link>
           {isLoading ? (
@@ -90,7 +90,7 @@ export function Nav() {
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-border bg-card/95 backdrop-blur-md px-6 py-4 flex flex-col gap-3">
           <Link to="/search" className="text-sm text-muted-foreground" onClick={() => setMobileMenuOpen(false)}>Find Games</Link>
-          <Link to="#" className="text-sm text-muted-foreground" onClick={() => setMobileMenuOpen(false)}>Post a Game</Link>
+          <Link to="/gatherings/new" className="text-sm text-muted-foreground" onClick={() => setMobileMenuOpen(false)}>Post a Game</Link>
           {user ? (
             <>
               <span className="text-sm font-medium text-primary">{user.displayName}</span>
