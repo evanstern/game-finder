@@ -60,7 +60,13 @@ export default function EditGathering({ params }: Route.ComponentProps) {
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10">
+    <div className="relative min-h-[calc(100vh-65px)]">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute left-1/2 top-1/3 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary opacity-[0.03] blur-[100px]" />
+        <div className="absolute inset-0 bg-noise" />
+      </div>
+
+    <div className="relative mx-auto max-w-3xl px-4 py-10">
       <GatheringForm
         submitLabel="Save Changes"
         isPending={updateMutation.isPending}
@@ -89,6 +95,7 @@ export default function EditGathering({ params }: Route.ComponentProps) {
           )
         }}
       />
+    </div>
     </div>
   )
 }

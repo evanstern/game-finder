@@ -38,11 +38,22 @@ export default function Dashboard() {
   if (authLoading || !currentUser) return null
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
-          Your Gatherings
-        </h1>
+    <div className="relative min-h-[calc(100vh-65px)]">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute left-1/2 top-1/4 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary opacity-[0.03] blur-[100px]" />
+        <div className="absolute inset-0 bg-noise" />
+      </div>
+
+    <div className="relative mx-auto max-w-3xl px-4 py-10 space-y-8">
+      <div className="animate-fade-in-up flex items-center justify-between">
+        <div className="space-y-1">
+          <p className="font-display text-[11px] font-semibold tracking-[0.2em] text-primary uppercase">
+            Host command table
+          </p>
+          <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
+            Your Gatherings
+          </h1>
+        </div>
         <Button asChild>
           <Link to="/gatherings/new">+ New Gathering</Link>
         </Button>
@@ -55,80 +66,72 @@ export default function Dashboard() {
           ))}
         </div>
       ) : gatherings.length === 0 ? (
-        <div className="rounded-lg border border-border bg-card/80 p-10 text-center">
-          <p className="text-muted-foreground">You have no gatherings yet.</p>
+        <div className="animate-fade-in-up animation-delay-100 rounded-lg border border-border bg-card/60 p-10 text-center backdrop-blur-sm glow-amber">
+          <p className="font-display text-sm text-muted-foreground">You have no gatherings yet.</p>
           <Button className="mt-4" asChild>
             <Link to="/gatherings/new">Create your first gathering</Link>
           </Button>
         </div>
       ) : (
-        <div className="rounded-lg border border-border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50">
-              <tr>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Title</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Next Session</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
-                <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {gatherings.map((gathering) => (
-                <tr key={gathering.id} className="bg-card/40">
-                  <td className="px-4 py-3">
-                    <Link
-                      to={`/gatherings/${gathering.id}`}
-                      className="font-medium text-foreground hover:text-primary transition-colors"
-                    >
-                      {gathering.title}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {gathering.nextOccurrenceAt
-                      ? new Date(gathering.nextOccurrenceAt).toLocaleDateString([], { dateStyle: 'medium' })
-                      : '—'}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge variant={gathering.status === 'active' ? 'default' : 'secondary'}>
+        <div className="animate-fade-in-up animation-delay-100 space-y-3">
+          {gatherings.map((gathering, index) => (
+            <div
+              key={gathering.id}
+              className={`animate-fade-in-up ${index === 0 ? 'animation-delay-100' : index === 1 ? 'animation-delay-200' : 'animation-delay-300'} rounded-lg border border-border bg-card/60 p-5 backdrop-blur-sm transition-all duration-200 hover:border-primary/20 hover:glow-amber`}
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <Link
+                    to={`/gatherings/${gathering.id}`}
+                    className="font-display text-base font-semibold tracking-tight text-foreground transition-colors hover:text-primary"
+                  >
+                    {gathering.title}
+                  </Link>
+                  <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+                    <span>
+                      {gathering.nextOccurrenceAt
+                        ? new Date(gathering.nextOccurrenceAt).toLocaleDateString([], { dateStyle: 'medium' })
+                        : 'No upcoming session'}
+                    </span>
+                    <Badge variant={gathering.status === 'active' ? 'default' : 'secondary'} className="text-[10px]">
                       {gathering.status === 'active' ? 'Active' : 'Closed'}
                     </Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link to={`/gatherings/${gathering.id}/edit`}>Edit</Link>
-                      </Button>
-                      {gathering.status === 'active' ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={closeMutation.isPending}
-                          onClick={() => closeMutation.mutate({ id: gathering.id })}
-                        >
-                          Close
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          disabled={deleteMutation.isPending}
-                          onClick={() => {
-                            if (confirm(`Delete "${gathering.title}"? This cannot be undone.`)) {
-                              deleteMutation.mutate({ id: gathering.id })
-                            }
-                          }}
-                        >
-                          Delete
-                        </Button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link to={`/gatherings/${gathering.id}/edit`}>Edit</Link>
+                  </Button>
+                  {gathering.status === 'active' ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={closeMutation.isPending}
+                      onClick={() => closeMutation.mutate({ id: gathering.id })}
+                    >
+                      Close
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      disabled={deleteMutation.isPending}
+                      onClick={() => {
+                        if (confirm(`Delete "${gathering.title}"? This cannot be undone.`)) {
+                          deleteMutation.mutate({ id: gathering.id })
+                        }
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
+    </div>
     </div>
   )
 }

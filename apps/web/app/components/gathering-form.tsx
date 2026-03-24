@@ -85,21 +85,24 @@ export function GatheringForm({
   }
 
   return (
-    <Card className="border-border bg-card/80 backdrop-blur-sm">
+    <Card className="animate-fade-in-up border-border bg-card/80 backdrop-blur-sm glow-amber">
       <form onSubmit={handleSubmit}>
-        <CardHeader>
+        <CardHeader className="text-center">
+          <p className="font-display mb-1 text-[11px] font-semibold tracking-[0.2em] text-primary uppercase">
+            {submitLabel === 'Create Gathering' ? 'Summon your party' : 'Revise the scroll'}
+          </p>
           <CardTitle className="font-display text-xl font-bold tracking-tight text-foreground">
             {submitLabel === 'Create Gathering' ? 'Create a Gathering' : 'Edit Gathering'}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           {errors.form && (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2.5">
+            <div className="animate-fade-in rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2.5">
               <p className="text-sm text-destructive-foreground">{errors.form}</p>
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="animate-fade-in-up animation-delay-100 grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="title" className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Title</Label>
               <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Friday Board Game Night" required />
@@ -107,12 +110,12 @@ export function GatheringForm({
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Games</Label>
-              <div className="flex flex-wrap gap-1.5 rounded-md border border-border p-2 min-h-[40px]">
+              <div className="flex flex-wrap gap-1.5 rounded-md border border-border bg-background/40 p-2 min-h-[40px]">
                 {games.map((game) => (
                   <Badge
                     key={game.id}
                     variant={gameIds.includes(game.id) ? 'default' : 'outline'}
-                    className="cursor-pointer"
+                    className="cursor-pointer transition-all duration-200 hover:scale-105"
                     onClick={() => toggleGame(game.id)}
                   >
                     {game.name}
@@ -123,7 +126,7 @@ export function GatheringForm({
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="animate-fade-in-up animation-delay-200 grid grid-cols-3 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="zipCode" className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Zip Code</Label>
               <Input id="zipCode" value={zipCode} onChange={(e) => setZipCode(e.target.value)} placeholder="90210" required />
@@ -147,7 +150,7 @@ export function GatheringForm({
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="animate-fade-in-up animation-delay-300 grid grid-cols-3 gap-4">
             {scheduleType !== 'once' && (
               <div className="space-y-1.5">
                 <Label htmlFor="endDate" className="text-xs font-medium tracking-wide text-muted-foreground uppercase">End Date</Label>
@@ -164,7 +167,7 @@ export function GatheringForm({
             </div>
           </div>
 
-          <div className="space-y-1.5">
+          <div className="animate-fade-in-up animation-delay-300 space-y-1.5">
             <Label className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Description (Markdown)</Label>
             <MarkdownEditor value={description} onChange={setDescription} placeholder="Describe your gathering..." />
           </div>

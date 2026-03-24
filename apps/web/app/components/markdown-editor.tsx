@@ -93,18 +93,28 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
 
   return (
     <div className="space-y-2">
-      <div className="grid grid-cols-2 gap-0 overflow-hidden rounded-md border border-border">
-        <div ref={editorRef} className="min-h-[300px] bg-background" />
-        <div className="min-h-[300px] overflow-auto border-l border-border bg-card p-4 prose prose-invert prose-sm max-w-none">
-          {value ? (
-            <Markdown>{value}</Markdown>
-          ) : (
-            <p className="text-muted-foreground">Preview will appear here...</p>
-          )}
+      <div className="grid grid-cols-2 gap-0 overflow-hidden rounded-md border border-border bg-card/40 backdrop-blur-sm">
+        <div className="relative">
+          <div className="absolute top-0 left-0 right-0 border-b border-border bg-muted/30 px-3 py-1.5">
+            <p className="font-display text-[10px] font-semibold tracking-[0.15em] text-muted-foreground uppercase">Editor</p>
+          </div>
+          <div ref={editorRef} className="min-h-[300px] bg-background/60 pt-7" />
+        </div>
+        <div className="relative border-l border-border">
+          <div className="absolute top-0 left-0 right-0 border-b border-border bg-muted/30 px-3 py-1.5">
+            <p className="font-display text-[10px] font-semibold tracking-[0.15em] text-muted-foreground uppercase">Preview</p>
+          </div>
+          <div className="min-h-[300px] overflow-auto bg-card/60 p-4 pt-8 prose prose-invert prose-sm max-w-none">
+            {value ? (
+              <Markdown>{value}</Markdown>
+            ) : (
+              <p className="text-muted-foreground italic">Preview will appear here...</p>
+            )}
+          </div>
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <label className="cursor-pointer rounded border border-border px-3 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+        <label className="cursor-pointer rounded border border-border bg-muted/20 px-3 py-1.5 text-[11px] font-medium tracking-wide text-muted-foreground uppercase transition-colors hover:text-foreground hover:border-primary/30">
           Upload .md / .txt
           <input
             type="file"
@@ -116,7 +126,7 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
         <button
           type="button"
           onClick={() => setVimEnabled(!vimEnabled)}
-          className="rounded border border-border px-3 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          className={`rounded border px-3 py-1.5 text-[11px] font-medium tracking-wide uppercase transition-colors ${vimEnabled ? 'border-primary/30 text-primary' : 'border-border text-muted-foreground hover:text-foreground hover:border-primary/30'}`}
         >
           vim mode: {vimEnabled ? 'on' : 'off'}
         </button>
