@@ -6,7 +6,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -18,7 +18,7 @@ services:
   redis:
     image: redis:7
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redisdata:/data
 
@@ -27,7 +27,7 @@ services:
       context: .
       dockerfile: apps/server/Dockerfile
     ports:
-      - "4000:4000"
+      - "${PORT:-4000}:4000"
     env_file:
       - .env
     environment:
@@ -55,7 +55,7 @@ services:
       context: .
       dockerfile: apps/web/Dockerfile
     ports:
-      - "3000:3000"
+      - "${WEB_PORT:-3000}:3000"
     env_file:
       - .env
     environment:
