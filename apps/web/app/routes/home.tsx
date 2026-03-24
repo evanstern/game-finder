@@ -79,7 +79,7 @@ function SearchCard() {
           <button
             key={tag.label}
             onClick={() => handleTagClick(tag.label)}
-            className="bg-[rgba(255,191,71,0.1)] border border-[rgba(255,191,71,0.15)] text-primary rounded-full px-2.5 py-0.5 text-[10px] cursor-pointer"
+            className="bg-[rgba(255,191,71,0.1)] border border-[rgba(255,191,71,0.15)] text-primary rounded-full px-2.5 py-0.5 text-xs cursor-pointer"
           >
             {tag.emoji} {tag.label}
           </button>
@@ -110,7 +110,7 @@ export default function Home() {
 
           {user ? (
             <>
-              <p className="text-sm text-[rgba(255,191,71,0.5)] uppercase tracking-[3px] mb-2">
+              <p className="text-xs text-[rgba(255,191,71,0.5)] uppercase tracking-[0.2em] mb-2">
                 Welcome back, {user.displayName}
               </p>
               <p className="text-muted-foreground text-sm">
@@ -122,7 +122,7 @@ export default function Home() {
               <p className="text-muted-foreground text-sm mb-1.5">
                 Navigate to tabletop adventures in your area.
               </p>
-              <p className="text-[11px] text-[rgba(255,191,71,0.5)] uppercase tracking-[3px]">
+              <p className="text-xs text-[rgba(255,191,71,0.5)] uppercase tracking-[0.2em]">
                 Every game night is a new quest
               </p>
             </>
@@ -135,24 +135,24 @@ export default function Home() {
           {MAP_PINS.map((pin) => (
             <div key={pin.label} className="text-center" style={{ opacity: pin.opacity }}>
               <div style={{ fontSize: pin.size }}>📍</div>
-              <div className="text-[rgba(255,255,255,0.3)] text-[9px]">{pin.label}</div>
+              <div className="text-[rgba(255,255,255,0.3)] text-xs">{pin.label}</div>
             </div>
           ))}
         </div>
 
         <div className="border-t border-[rgba(255,191,71,0.08)] mt-10 pt-8 pb-6 px-6">
-          <p className="text-center text-[10px] text-[rgba(255,191,71,0.5)] uppercase tracking-[3px] mb-5">
+          <p className="text-center text-xs text-[rgba(255,191,71,0.5)] uppercase tracking-[3px] mb-5">
             How It Works
           </p>
           <div className="flex flex-col md:flex-row gap-4 md:gap-4 justify-center items-center max-w-lg mx-auto">
             {HOW_IT_WORKS.map((step, i) => (
               <Fragment key={step.label}>
                 <div className="text-center flex-1">
-                  <div className="w-9 h-9 mx-auto mb-2 rounded-full border border-[rgba(255,191,71,0.2)] bg-[rgba(255,191,71,0.1)] flex items-center justify-center text-base">
+                  <div className="w-10 h-10 mx-auto mb-2 rounded-full border border-[rgba(255,191,71,0.2)] bg-[rgba(255,191,71,0.1)] flex items-center justify-center text-base">
                     {step.icon}
                   </div>
-                  <div className="text-foreground text-[11px] font-semibold mb-0.5">{step.label}</div>
-                  <div className="text-[rgba(255,255,255,0.35)] text-[9px] leading-snug">{step.desc}</div>
+                  <div className="text-foreground text-sm font-semibold mb-0.5">{step.label}</div>
+                  <div className="text-[rgba(255,255,255,0.35)] text-xs leading-snug">{step.desc}</div>
                 </div>
                 {i < HOW_IT_WORKS.length - 1 && (
                   <div className="hidden md:block text-[rgba(255,191,71,0.25)] pb-5">→</div>
@@ -163,11 +163,11 @@ export default function Home() {
         </div>
 
         <div className="border-t border-[rgba(255,191,71,0.06)] px-6 py-3.5 flex justify-between items-center">
-          <span className="text-[rgba(255,255,255,0.2)] text-[9px]">© 2026 gamefinder</span>
+          <span className="text-[rgba(255,255,255,0.2)] text-[11px]">© 2026 gamefinder</span>
           <div className="flex gap-3.5">
-            <a href="#" className="text-[rgba(255,255,255,0.2)] text-[9px] hover:text-[rgba(255,255,255,0.4)]">About</a>
-            <a href="#" className="text-[rgba(255,255,255,0.2)] text-[9px] hover:text-[rgba(255,255,255,0.4)]">Privacy</a>
-            <a href="#" className="text-[rgba(255,255,255,0.2)] text-[9px] hover:text-[rgba(255,255,255,0.4)]">Contact</a>
+            <a href="#" className="text-[rgba(255,255,255,0.2)] text-[11px] hover:text-[rgba(255,255,255,0.4)]">About</a>
+            <a href="#" className="text-[rgba(255,255,255,0.2)] text-[11px] hover:text-[rgba(255,255,255,0.4)]">Privacy</a>
+            <a href="#" className="text-[rgba(255,255,255,0.2)] text-[11px] hover:text-[rgba(255,255,255,0.4)]">Contact</a>
           </div>
         </div>
       </div>
