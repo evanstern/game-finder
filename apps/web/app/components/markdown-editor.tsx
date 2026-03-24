@@ -96,13 +96,13 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
       <div className="grid grid-cols-2 gap-0 overflow-hidden rounded-md border border-border bg-card/40 backdrop-blur-sm">
         <div className="relative">
           <div className="absolute top-0 left-0 right-0 border-b border-border bg-muted/30 px-3 py-1.5">
-            <p className="font-display text-[10px] font-semibold tracking-[0.15em] text-muted-foreground uppercase">Editor</p>
+            <p className="text-[10px] font-semibold tracking-[0.15em] text-muted-foreground uppercase">Editor</p>
           </div>
           <div ref={editorRef} className="min-h-[300px] bg-background/60 pt-7" />
         </div>
         <div className="relative border-l border-border">
           <div className="absolute top-0 left-0 right-0 border-b border-border bg-muted/30 px-3 py-1.5">
-            <p className="font-display text-[10px] font-semibold tracking-[0.15em] text-muted-foreground uppercase">Preview</p>
+            <p className="text-[10px] font-semibold tracking-[0.15em] text-muted-foreground uppercase">Preview</p>
           </div>
           <div className="min-h-[300px] overflow-auto bg-card/60 p-4 pt-8 prose prose-invert prose-sm max-w-none">
             {value ? (

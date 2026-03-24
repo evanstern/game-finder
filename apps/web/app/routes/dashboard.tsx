@@ -47,10 +47,10 @@ export default function Dashboard() {
     <div className="relative mx-auto max-w-3xl px-4 py-10 space-y-8">
       <div className="animate-fade-in-up flex items-center justify-between">
         <div className="space-y-1">
-          <p className="font-display text-[11px] font-semibold tracking-[0.2em] text-primary uppercase">
+          <p className="text-[11px] font-semibold tracking-[0.2em] text-primary uppercase">
             Host command table
           </p>
-          <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
             Your Gatherings
           </h1>
         </div>
@@ -66,8 +66,8 @@ export default function Dashboard() {
           ))}
         </div>
       ) : gatherings.length === 0 ? (
-        <div className="animate-fade-in-up animation-delay-100 rounded-lg border border-border bg-card/60 p-10 text-center backdrop-blur-sm glow-amber">
-          <p className="font-display text-sm text-muted-foreground">You have no gatherings yet.</p>
+        <div className="animate-fade-in-up animation-delay-100 rounded-lg border border-border bg-card/60 p-10 text-center backdrop-blur-sm">
+          <p className="text-sm text-muted-foreground">You have no gatherings yet.</p>
           <Button className="mt-4" asChild>
             <Link to="/gatherings/new">Create your first gathering</Link>
           </Button>
@@ -77,13 +77,13 @@ export default function Dashboard() {
           {gatherings.map((gathering, index) => (
             <div
               key={gathering.id}
-              className={`animate-fade-in-up ${index === 0 ? 'animation-delay-100' : index === 1 ? 'animation-delay-200' : 'animation-delay-300'} rounded-lg border border-border bg-card/60 p-5 backdrop-blur-sm transition-all duration-200 hover:border-primary/20 hover:glow-amber`}
+              className={`animate-fade-in-up ${index === 0 ? 'animation-delay-100' : index === 1 ? 'animation-delay-200' : 'animation-delay-300'} rounded-lg border border-border bg-card/60 p-5 backdrop-blur-sm transition-all duration-200 hover:border-primary/20`}
             >
               <div className="flex items-center justify-between gap-4">
                 <div className="min-w-0 flex-1">
                   <Link
                     to={`/gatherings/${gathering.id}`}
-                    className="font-display text-base font-semibold tracking-tight text-foreground transition-colors hover:text-primary"
+                    className="text-base font-semibold tracking-tight text-foreground transition-colors hover:text-primary"
                   >
                     {gathering.title}
                   </Link>
