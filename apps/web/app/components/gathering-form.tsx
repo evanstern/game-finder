@@ -119,14 +119,16 @@ export function GatheringForm({
               <Label className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Games</Label>
               <div className="flex flex-wrap gap-1.5 rounded-md border border-border bg-background/40 p-2 min-h-[40px]">
                 {games.map((game) => (
-                  <Badge
+                  <Button
                     key={game.id}
+                    type="button"
                     variant={gameIds.includes(game.id) ? 'default' : 'outline'}
-                    className="cursor-pointer transition-all duration-200 hover:scale-105"
+                    size="sm"
+                    className={gameIds.includes(game.id) ? '' : 'text-muted-foreground'}
                     onClick={() => toggleGame(game.id)}
                   >
                     {game.name}
-                  </Badge>
+                  </Button>
                 ))}
               </div>
               {errors.gameIds && <p className="text-sm text-destructive">{errors.gameIds}</p>}
