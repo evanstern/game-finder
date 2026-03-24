@@ -35,6 +35,12 @@ Game Finder is a prototype app for finding local tabletop games (board games, D&
 - Edit existing files over creating new ones
 - Prototype mindset — favor simplicity and speed over perfection
 
+### UI Components
+
+- Always use components from `packages/ui` — never use raw HTML elements (`<button>`, `<input>`, `<select>`, `<textarea>`) when a UI component exists
+- Available components: Button, Input, Label, Card, Badge, Checkbox, Select, RadioGroup, Pagination, Table, Textarea
+- If a needed variant or style doesn't exist, add it to the UI package component — don't inline custom styles on raw elements
+
 ### Naming
 
 - Files and directories: `kebab-case`

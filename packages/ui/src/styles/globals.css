@@ -1,4 +1,7 @@
 @import "tailwindcss";
+@source "../../..";
+@source "../../../../../apps/web/app";
+@plugin "@tailwindcss/typography";
 
 @theme extend {
   --color-background: var(--background);
@@ -61,11 +64,6 @@
   }
 }
 
-@layer utilities {
-  .bg-noise {
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
-  }
-}
 
 @keyframes fade-in-up {
   from {
@@ -88,7 +86,23 @@
   50% { opacity: 0.05; }
 }
 
+@keyframes text-shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
 @layer utilities {
+  .prose-themed {
+    @apply prose prose-sm prose-invert max-w-none;
+    @apply prose-headings:text-foreground prose-headings:font-semibold;
+    @apply prose-p:text-foreground/80 prose-strong:text-foreground prose-em:text-foreground/70;
+    @apply prose-a:text-primary prose-a:no-underline hover:prose-a:underline;
+    @apply prose-code:text-primary prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded;
+    @apply prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted;
+    @apply prose-blockquote:border-primary/30 prose-blockquote:text-muted-foreground;
+    @apply prose-li:text-foreground/80 prose-hr:border-border;
+  }
+
   .animate-fade-in-up {
     animation: fade-in-up 0.5s ease-out both;
   }
@@ -97,6 +111,10 @@
   }
   .animate-glow-breathe {
     animation: glow-breathe 6s ease-in-out infinite;
+  }
+  .animate-text-shimmer {
+    background-size: 200% auto;
+    animation: text-shimmer 4s linear infinite;
   }
   .animation-delay-100 { animation-delay: 100ms; }
   .animation-delay-200 { animation-delay: 200ms; }

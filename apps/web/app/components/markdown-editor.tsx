@@ -3,6 +3,7 @@ import { EditorState } from '@codemirror/state'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { EditorView, keymap, lineNumbers } from '@codemirror/view'
 import { defaultKeymap } from '@codemirror/commands'
+import { Button } from '@game-finder/ui/components/button'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Markdown from 'react-markdown'
 
@@ -17,6 +18,7 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
   const viewRef = useRef<EditorView | null>(null)
   const [vimEnabled, setVimEnabled] = useState(false)
   const [vimModule, setVimModule] = useState<typeof import('@replit/codemirror-vim') | null>(null)
+  const [activeTab, setActiveTab] = useState<'editor' | 'preview'>('editor')
 
   useEffect(() => {
     import('@replit/codemirror-vim').then(setVimModule)
@@ -70,6 +72,13 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
   }, [createEditor])
 
   useEffect(() => {
+    if (activeTab === 'editor') {
+      createEditor()
+      return () => viewRef.current?.destroy()
+    }
+  }, [activeTab, createEditor])
+
+  useEffect(() => {
     const view = viewRef.current
     if (!view) return
     const currentDoc = view.state.doc.toString()
@@ -93,25 +102,46 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
 
   return (
     <div className="space-y-2">
-      <div className="grid grid-cols-2 gap-0 overflow-hidden rounded-md border border-border bg-card/40 backdrop-blur-sm">
-        <div className="relative">
-          <div className="absolute top-0 left-0 right-0 border-b border-border bg-muted/30 px-3 py-1.5">
-            <p className="text-[10px] font-semibold tracking-[0.15em] text-muted-foreground uppercase">Editor</p>
-          </div>
-          <div ref={editorRef} className="min-h-[300px] bg-background/60 pt-7" />
+      <div className="overflow-hidden rounded-md border border-border bg-card/40 backdrop-blur-sm">
+        <div className="flex border-b border-border bg-muted/30">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setActiveTab('editor')}
+            className={`rounded-none text-xs font-semibold tracking-[0.15em] uppercase ${
+              activeTab === 'editor'
+                ? 'text-primary border-b-2 border-primary -mb-px'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Editor
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setActiveTab('preview')}
+            className={`rounded-none text-xs font-semibold tracking-[0.15em] uppercase ${
+              activeTab === 'preview'
+                ? 'text-primary border-b-2 border-primary -mb-px'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Preview
+          </Button>
         </div>
-        <div className="relative border-l border-border">
-          <div className="absolute top-0 left-0 right-0 border-b border-border bg-muted/30 px-3 py-1.5">
-            <p className="text-[10px] font-semibold tracking-[0.15em] text-muted-foreground uppercase">Preview</p>
-          </div>
-          <div className="min-h-[300px] overflow-auto bg-card/60 p-4 pt-8 prose prose-invert prose-sm max-w-none">
+        {activeTab === 'editor' ? (
+          <div ref={editorRef} className="min-h-[300px] bg-background/60" />
+        ) : (
+          <div className="min-h-[300px] overflow-auto bg-card/60 p-4 prose-themed">
             {value ? (
               <Markdown>{value}</Markdown>
             ) : (
-              <p className="text-muted-foreground italic">Preview will appear here...</p>
+              <p className="text-sm text-muted-foreground italic">Preview will appear here...</p>
             )}
           </div>
-        </div>
+        )}
       </div>
       <div className="flex items-center gap-2">
         <label className="cursor-pointer rounded border border-border bg-muted/20 px-3 py-1.5 text-[11px] font-medium tracking-wide text-muted-foreground uppercase transition-colors hover:text-foreground hover:border-primary/30">
@@ -123,13 +153,15 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
             className="hidden"
           />
         </label>
-        <button
+        <Button
           type="button"
+          variant="outline"
+          size="sm"
           onClick={() => setVimEnabled(!vimEnabled)}
-          className={`rounded border px-3 py-1.5 text-[11px] font-medium tracking-wide uppercase transition-colors ${vimEnabled ? 'border-primary/30 text-primary' : 'border-border text-muted-foreground hover:text-foreground hover:border-primary/30'}`}
+          className={`text-[11px] font-medium tracking-wide uppercase ${vimEnabled ? 'border-primary/30 text-primary' : 'text-muted-foreground hover:border-primary/30'}`}
         >
           vim mode: {vimEnabled ? 'on' : 'off'}
-        </button>
+        </Button>
       </div>
     </div>
   )

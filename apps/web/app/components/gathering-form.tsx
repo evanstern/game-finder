@@ -8,7 +8,13 @@ import {
 } from '@game-finder/ui/components/card'
 import { Input } from '@game-finder/ui/components/input'
 import { Label } from '@game-finder/ui/components/label'
-import { Badge } from '@game-finder/ui/components/badge'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@game-finder/ui/components/select'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTRPC } from '../trpc/provider.js'
@@ -85,13 +91,13 @@ export function GatheringForm({
   }
 
   return (
-    <Card className="animate-fade-in-up border-border bg-card/80 backdrop-blur-sm">
+    <Card className="animate-fade-in-up border-border bg-card/80 backdrop-blur-sm py-10">
       <form onSubmit={handleSubmit}>
-        <CardHeader className="text-center">
-          <p className="mb-1 text-[11px] font-semibold tracking-[0.2em] text-primary uppercase">
+        <CardHeader className="text-center pb-2">
+          <p className="mb-2 text-lg font-bold tracking-[0.25em] uppercase animate-fade-in animate-text-shimmer bg-gradient-to-r from-primary via-amber-200 to-primary bg-clip-text text-transparent">
             {submitLabel === 'Create Gathering' ? 'Summon your party' : 'Revise the scroll'}
           </p>
-          <CardTitle className="text-xl font-bold tracking-tight text-foreground">
+          <CardTitle className="text-sm font-medium tracking-wide text-muted-foreground">
             {submitLabel === 'Create Gathering' ? 'Create a Gathering' : 'Edit Gathering'}
           </CardTitle>
         </CardHeader>
@@ -110,16 +116,18 @@ export function GatheringForm({
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Games</Label>
-              <div className="flex flex-wrap gap-1.5 rounded-md border border-border bg-background/40 p-2 min-h-[40px]">
+              <div className="flex flex-wrap gap-1.5 rounded-md border border-border bg-background/40 px-4 py-2 min-h-[40px] items-center">
                 {games.map((game) => (
-                  <Badge
+                  <Button
                     key={game.id}
+                    type="button"
                     variant={gameIds.includes(game.id) ? 'default' : 'outline'}
-                    className="cursor-pointer transition-all duration-200 hover:scale-105"
+                    size="sm"
+                    className={`h-7 px-2.5 text-[11px] ${gameIds.includes(game.id) ? '' : 'text-muted-foreground'}`}
                     onClick={() => toggleGame(game.id)}
                   >
                     {game.name}
-                  </Badge>
+                  </Button>
                 ))}
               </div>
               {errors.gameIds && <p className="text-sm text-destructive">{errors.gameIds}</p>}
@@ -132,17 +140,17 @@ export function GatheringForm({
               <Input id="zipCode" value={zipCode} onChange={(e) => setZipCode(e.target.value)} placeholder="90210" required />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="scheduleType" className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Schedule</Label>
-              <select
-                id="scheduleType"
-                value={scheduleType}
-                onChange={(e) => setScheduleType(e.target.value as GatheringFormData['scheduleType'])}
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors"
-              >
-                {SCHEDULE_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
+              <Label className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Schedule</Label>
+              <Select value={scheduleType} onValueChange={(v) => setScheduleType(v as GatheringFormData['scheduleType'])}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SCHEDULE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="startsAt" className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Date & Time</Label>
@@ -172,8 +180,8 @@ export function GatheringForm({
             <MarkdownEditor value={description} onChange={setDescription} placeholder="Describe your gathering..." />
           </div>
         </CardContent>
-        <CardFooter>
-          <Button type="submit" className="w-full" disabled={isPending}>
+        <CardFooter className="justify-center pt-4">
+          <Button type="submit" className="px-10" disabled={isPending}>
             {isPending ? 'Saving...' : submitLabel}
           </Button>
         </CardFooter>
