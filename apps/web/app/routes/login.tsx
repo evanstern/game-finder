@@ -12,6 +12,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useTRPC } from '../trpc/provider.js'
+import { MapBackground } from '../components/map-background.js'
 
 export default function LogIn() {
   const navigate = useNavigate()
@@ -50,13 +51,10 @@ export default function LogIn() {
   }
 
   return (
-    <div className="relative flex min-h-[calc(100vh-65px)] items-center justify-center px-4">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-1/2 top-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary opacity-[0.02] blur-[80px]" />
-        <div className="absolute inset-0 bg-noise" />
-      </div>
+    <div className="relative flex min-h-[calc(100vh-65px)] items-center justify-center px-6">
+      <MapBackground />
 
-      <Card className="animate-fade-in-up relative w-full max-w-sm border-border bg-card/80 backdrop-blur-sm">
+      <Card className="animate-fade-in-up relative z-10 w-full max-w-sm border-border bg-card/80 backdrop-blur-sm">
         <CardHeader className="text-center">
           <p className="mb-1 text-[11px] font-semibold tracking-[0.2em] text-primary uppercase">
             Welcome back
