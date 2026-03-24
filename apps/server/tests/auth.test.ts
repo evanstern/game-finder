@@ -1,6 +1,7 @@
 import { afterAll, afterEach, describe, expect, it } from 'vitest'
 import {
   cleanup,
+  createAuthenticatedCaller,
   createTestCaller,
   createTestUser,
   db,
@@ -121,5 +122,51 @@ describe('auth.login', () => {
         code: 'UNAUTHORIZED',
       }),
     )
+  })
+})
+
+describe('auth.logout', () => {
+  it('clears session and cookie', async () => {
+    const user = await createTestUser()
+    const { caller, resHeaders } = await createAuthenticatedCaller(user.id)
+
+    const result = await caller.auth.logout()
+
+    expect(result.success).toBe(true)
+    expect(resHeaders.get('set-cookie')).toContain('Max-Age=0')
+  })
+
+  it('rejects unauthenticated request', async () => {
+    const { caller } = await createTestCaller()
+
+    await expect(caller.auth.logout()).rejects.toThrow(
+      expect.objectContaining({
+        code: 'UNAUTHORIZED',
+      }),
+    )
+  })
+})
+
+describe('auth.me', () => {
+  it('returns user when authenticated', async () => {
+    const user = await createTestUser({
+      email: 'me@example.com',
+      displayName: 'Me User',
+    })
+    const { caller } = await createAuthenticatedCaller(user.id)
+
+    const result = await caller.auth.me()
+
+    expect(result).not.toBeNull()
+    expect(result!.email).toBe('me@example.com')
+    expect(result!.displayName).toBe('Me User')
+  })
+
+  it('returns null when not authenticated', async () => {
+    const { caller } = await createTestCaller()
+
+    const result = await caller.auth.me()
+
+    expect(result).toBeNull()
   })
 })
