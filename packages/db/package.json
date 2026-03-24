@@ -13,7 +13,8 @@
     "format:check": "biome format .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "migrate": "tsx src/migrate.ts"
+    "migrate": "tsx src/migrate.ts",
+    "seed": "tsx src/seed.ts"
   },
   "dependencies": {
     "ioredis": "^5.10.1",
