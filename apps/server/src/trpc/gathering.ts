@@ -5,6 +5,7 @@ import {
   updateGatheringSchema,
 } from '@game-finder/contracts/gathering'
 import { computeNextOccurrence } from '../gathering/next-occurrence.js'
+import type { Context } from './context.js'
 import { createRouter, protectedProcedure, publicProcedure } from './init.js'
 interface GatheringRow {
   id: string
@@ -42,16 +43,15 @@ function serializeGathering(row: GatheringRow) {
   }
 }
 
-async function fetchGamesForGathering(db: unknown, gatheringId: string) {
-  const typedDb = db as import('kysely').Kysely<import('@game-finder/db').Database>
-  const rows = await typedDb
+async function fetchGamesForGathering(ctx: { db: Context['db'] }, gatheringId: string) {
+  const rows = await ctx.db
     .selectFrom('gathering_game')
     .innerJoin('game', 'game.id', 'gathering_game.game_id')
     .selectAll('game')
     .where('gathering_game.gathering_id', '=', gatheringId)
     .execute()
 
-  return rows.map((g) => ({
+  return rows.map((g: { id: string; name: string; type: string; description: string; min_players: number; max_players: number; image_url: string | null; created_at: Date; updated_at: Date }) => ({
     id: g.id,
     name: g.name,
     type: g.type,
@@ -112,7 +112,7 @@ export const gatheringRouter = createRouter({
         })))
         .execute()
 
-      const games = await fetchGamesForGathering(ctx.db, gathering.id)
+      const games = await fetchGamesForGathering(ctx, gathering.id)
 
       return {
         ...serializeGathering(gathering),
@@ -181,7 +181,7 @@ export const gatheringRouter = createRouter({
           .execute()
       }
 
-      const games = await fetchGamesForGathering(ctx.db, id)
+      const games = await fetchGamesForGathering(ctx, id)
 
       return {
         ...serializeGathering(updated),
@@ -271,7 +271,7 @@ export const gatheringRouter = createRouter({
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Gathering not found' })
       }
 
-      const games = await fetchGamesForGathering(ctx.db, row.id)
+      const games = await fetchGamesForGathering(ctx, row.id)
 
       return {
         ...serializeGathering(row as unknown as GatheringRow),
