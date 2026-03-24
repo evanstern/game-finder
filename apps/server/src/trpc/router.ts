@@ -1,3 +1,4 @@
+import { authRouter } from './auth.js'
 import { createRouter, publicProcedure } from './init.js'
 
 export const appRouter = createRouter({
@@ -6,6 +7,7 @@ export const appRouter = createRouter({
       return { status: 'ok' as const }
     }),
   }),
+  auth: authRouter,
 })
 
 export type AppRouter = typeof appRouter

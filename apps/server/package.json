@@ -16,12 +16,16 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@game-finder/contracts": "workspace:^",
     "@game-finder/db": "workspace:*",
     "@hono/node-server": "^1.13.0",
     "@trpc/server": "^11.0.0",
-    "hono": "^4.6.0"
+    "bcryptjs": "^3.0.3",
+    "hono": "^4.6.0",
+    "ioredis": "^5.10.1"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
     "tsx": "^4.19.0",
     "vitest": "^3.0.0"
   }

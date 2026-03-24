@@ -16,14 +16,29 @@ export default await createHonoServer({
           method: c.req.method,
           headers: c.req.raw.headers,
           body: c.req.raw.body,
-        }),
+          duplex: 'half',
+        } as RequestInit),
       )
+
+      const headers = new Headers()
+      for (const [key, value] of res.headers.entries()) {
+        if (key.toLowerCase() === 'set-cookie') continue
+        headers.append(key, value)
+      }
+      for (const cookie of res.headers.getSetCookie()) {
+        headers.append('set-cookie', cookie)
+      }
 
       return new Response(res.body, {
         status: res.status,
         statusText: res.statusText,
-        headers: new Headers(res.headers),
+        headers,
       })
     })
+  },
+  getLoadContext(c) {
+    return {
+      cookie: c.req.header('cookie') ?? '',
+    }
   },
 })

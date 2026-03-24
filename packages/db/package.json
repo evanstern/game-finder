@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./redis": "./src/redis.ts"
   },
   "scripts": {
     "lint": "biome check .",
@@ -15,10 +16,12 @@
     "migrate": "tsx src/migrate.ts"
   },
   "dependencies": {
+    "ioredis": "^5.10.1",
     "kysely": "^0.27.0",
     "pg": "^8.13.0"
   },
   "devDependencies": {
+    "@types/ioredis": "^5.0.0",
     "@types/pg": "^8.11.0",
     "tsx": "^4.19.0",
     "vitest": "^3.0.0"

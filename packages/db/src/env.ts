@@ -15,3 +15,10 @@ export function getDbConfig() {
     password: requireEnv('DB_PASSWORD'),
   }
 }
+
+export function getRedisConfig() {
+  return {
+    host: requireEnv('REDIS_HOST'),
+    port: Number.parseInt(requireEnv('REDIS_PORT'), 10),
+  }
+}
