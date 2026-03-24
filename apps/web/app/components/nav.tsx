@@ -36,8 +36,8 @@ export function Nav() {
           {mobileMenuOpen ? '✕' : '☰'}
         </button>
         <div className="hidden md:flex items-center gap-5">
-          <Link to="#" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-            Browse
+          <Link to="/search" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+            Find Games
           </Link>
           <Link to="#" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
             Post a Game
@@ -84,7 +84,7 @@ export function Nav() {
       </div>
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-border bg-card/95 backdrop-blur-md px-6 py-4 flex flex-col gap-3">
-          <Link to="#" className="text-sm text-muted-foreground" onClick={() => setMobileMenuOpen(false)}>Browse</Link>
+          <Link to="/search" className="text-sm text-muted-foreground" onClick={() => setMobileMenuOpen(false)}>Find Games</Link>
           <Link to="#" className="text-sm text-muted-foreground" onClick={() => setMobileMenuOpen(false)}>Post a Game</Link>
           {user ? (
             <>

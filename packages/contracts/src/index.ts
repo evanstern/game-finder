@@ -10,3 +10,4 @@ export {
 } from './auth.js'
 export * from './game.js'
 export * from './gathering.js'
+export * from './search.js'

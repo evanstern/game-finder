@@ -4,7 +4,10 @@ import {
   createGatheringSchema,
   updateGatheringSchema,
 } from '@game-finder/contracts/gathering'
+import { searchGatheringsSchema } from '@game-finder/contracts/search'
+import { sql } from '@game-finder/db'
 import { computeNextOccurrence } from '../gathering/next-occurrence.js'
+import { stripMarkdownPreview } from '../gathering/strip-markdown.js'
 import type { Context } from './context.js'
 import { createRouter, protectedProcedure, publicProcedure } from './init.js'
 interface GatheringRow {
@@ -292,5 +295,163 @@ export const gatheringRouter = createRouter({
         .execute()
 
       return rows.map((row) => serializeGathering(row))
+    }),
+
+  search: publicProcedure
+    .input(searchGatheringsSchema)
+    .query(async ({ input, ctx }) => {
+      const { zipCode, radius, query, gameTypes, sortBy, page, pageSize } = input
+
+      // 1. Look up the searcher's ZIP
+      const searchZip = await ctx.db
+        .selectFrom('zip_code_location')
+        .selectAll()
+        .where('zip_code', '=', zipCode)
+        .executeTakeFirst()
+
+      if (!searchZip) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid ZIP code' })
+      }
+
+      const lat = Number(searchZip.latitude)
+      const lng = Number(searchZip.longitude)
+
+      // Haversine distance SQL expression
+      const distanceExpr = sql<number>`(
+        3959 * acos(
+          cos(radians(${lat})) * cos(radians(cast(${sql.ref('z.latitude')} as double precision))) *
+          cos(radians(cast(${sql.ref('z.longitude')} as double precision)) - radians(${lng})) +
+          sin(radians(${lat})) * sin(radians(cast(${sql.ref('z.latitude')} as double precision)))
+        )
+      )`
+
+      // 2. Build the base query
+      let baseQuery = ctx.db
+        .selectFrom('gathering')
+        .innerJoin('zip_code_location as z', 'z.zip_code', 'gathering.zip_code')
+        .innerJoin('users', 'users.id', 'gathering.host_id')
+        .where('gathering.status', '=', 'active')
+        .where('gathering.next_occurrence_at', 'is not', null)
+
+      // 3. Keyword filter: match title or linked game name
+      if (query) {
+        const pattern = `%${query}%`
+        baseQuery = baseQuery.where((eb) =>
+          eb.or([
+            eb('gathering.title', 'ilike', pattern),
+            eb.exists(
+              eb
+                .selectFrom('gathering_game')
+                .innerJoin('game', 'game.id', 'gathering_game.game_id')
+                .whereRef('gathering_game.gathering_id', '=', 'gathering.id')
+                .where('game.name', 'ilike', pattern)
+                .select(sql.lit(1).as('one')),
+            ),
+          ]),
+        )
+      }
+
+      // 4. Game type filter
+      if (gameTypes && gameTypes.length > 0) {
+        baseQuery = baseQuery.where((eb) =>
+          eb.exists(
+            eb
+              .selectFrom('gathering_game')
+              .innerJoin('game', 'game.id', 'gathering_game.game_id')
+              .whereRef('gathering_game.gathering_id', '=', 'gathering.id')
+              .where('game.type', 'in', gameTypes)
+              .select(sql.lit(1).as('one')),
+          ),
+        )
+      }
+
+      // 5. Radius filter
+      baseQuery = baseQuery.where(distanceExpr, '<=', radius)
+
+      // 6. Count total
+      const countResult = await baseQuery
+        .select(sql<number>`count(*)`.as('count'))
+        .executeTakeFirstOrThrow()
+      const total = Number(countResult.count)
+
+      // 7. Fetch paginated results
+      let resultsQuery = baseQuery
+        .select([
+          'gathering.id',
+          'gathering.title',
+          'gathering.description',
+          'gathering.zip_code',
+          'gathering.schedule_type',
+          'gathering.starts_at',
+          'gathering.next_occurrence_at',
+          'gathering.max_players',
+          'gathering.status',
+          'users.display_name as host_display_name',
+          'z.city as location_city',
+          'z.state as location_state',
+          distanceExpr.as('distance_miles'),
+        ])
+        .limit(pageSize)
+        .offset((page - 1) * pageSize)
+
+      if (sortBy === 'next_session') {
+        resultsQuery = resultsQuery.orderBy('gathering.next_occurrence_at', 'asc')
+      } else {
+        resultsQuery = resultsQuery.orderBy(sql`distance_miles`, 'asc')
+      }
+
+      const rows = await resultsQuery.execute()
+
+      // 8. Fetch games for each gathering
+      const gatheringIds = rows.map((r) => r.id)
+      const gamesMap: Map<string, Array<{ id: string; name: string; type: string }>> = new Map()
+
+      if (gatheringIds.length > 0) {
+        const gameRows = await ctx.db
+          .selectFrom('gathering_game')
+          .innerJoin('game', 'game.id', 'gathering_game.game_id')
+          .select([
+            'gathering_game.gathering_id',
+            'game.id',
+            'game.name',
+            'game.type',
+          ])
+          .where('gathering_game.gathering_id', 'in', gatheringIds)
+          .execute()
+
+        for (const row of gameRows) {
+          const existing = gamesMap.get(row.gathering_id) ?? []
+          existing.push({ id: row.id, name: row.name, type: row.type })
+          gamesMap.set(row.gathering_id, existing)
+        }
+      }
+
+      // 9. Serialize results
+      const gatherings = rows.map((row) => ({
+        id: row.id,
+        title: row.title,
+        description: stripMarkdownPreview(row.description),
+        zipCode: row.zip_code,
+        distanceMiles: Math.round(Number(row.distance_miles) * 10) / 10,
+        scheduleType: row.schedule_type,
+        startsAt: row.starts_at,
+        nextOccurrenceAt: row.next_occurrence_at,
+        maxPlayers: row.max_players,
+        status: row.status,
+        hostDisplayName: (row as Record<string, unknown>).host_display_name as string,
+        games: gamesMap.get(row.id) ?? [],
+        locationLabel: `${(row as Record<string, unknown>).location_city}, ${(row as Record<string, unknown>).location_state}`,
+      }))
+
+      return {
+        gatherings,
+        total,
+        page,
+        pageSize,
+        searchLocation: {
+          city: searchZip.city,
+          state: searchZip.state,
+        },
+      }
     }),
 })

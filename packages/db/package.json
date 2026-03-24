@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "migrate": "tsx src/migrate.ts",
-    "seed": "tsx src/seed.ts"
+    "seed": "tsx src/seed.ts",
+    "seed:zip-codes": "tsx src/seed-zip-codes.ts"
   },
   "dependencies": {
     "ioredis": "^5.10.1",

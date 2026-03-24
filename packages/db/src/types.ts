@@ -43,9 +43,18 @@ export interface GatheringGameTable {
   game_id: string
 }
 
+export interface ZipCodeLocationTable {
+  zip_code: string
+  city: string
+  state: string
+  latitude: number
+  longitude: number
+}
+
 export interface Database {
   users: UsersTable
   game: GameTable
   gathering: GatheringTable
   gathering_game: GatheringGameTable
+  zip_code_location: ZipCodeLocationTable
 }
