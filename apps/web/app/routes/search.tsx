@@ -18,11 +18,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@game-finder/ui/components/select'
-import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Link, useSearchParams } from 'react-router'
+import { Link, useNavigation, useSearchParams } from 'react-router'
 import { MapBackground } from '../components/map-background.js'
-import { useTRPC } from '../trpc/provider.js'
+import { createServerTRPC } from '../trpc/server.js'
+import type { Route } from './+types/search.js'
 
 type GameType = 'board_game' | 'ttrpg' | 'card_game'
 
@@ -50,6 +50,34 @@ function formatDate(date: string | Date | null): string {
   })
 }
 
+export async function loader({ request, context }: Route.LoaderArgs) {
+  const ctx = context as { cookie?: string }
+  const url = new URL(request.url)
+  const zip = url.searchParams.get('zip') ?? ''
+
+  if (!zip) return { results: null }
+
+  const trpc = createServerTRPC(ctx.cookie ?? '')
+  const radius = Number(url.searchParams.get('radius')) || 25
+  const query = url.searchParams.get('q') ?? ''
+  const typesParam = url.searchParams.get('types')
+  const gameTypes = typesParam ? typesParam.split(',').filter(Boolean) as GameType[] : undefined
+  const sortBy = (url.searchParams.get('sort') ?? 'distance') as 'distance' | 'next_session'
+  const page = Number(url.searchParams.get('page')) || 1
+
+  const results = await trpc.gathering.search.query({
+    zipCode: zip,
+    radius,
+    query: query || undefined,
+    gameTypes: gameTypes && gameTypes.length > 0 ? gameTypes : undefined,
+    sortBy,
+    page,
+    pageSize: 20,
+  })
+
+  return { results }
+}
+
 function GameTypeBadge({ type }: { type: GameType }) {
   const colorMap: Record<GameType, string> = {
     board_game: 'bg-primary/15 text-primary border-primary/20',
@@ -65,8 +93,8 @@ function GameTypeBadge({ type }: { type: GameType }) {
   )
 }
 
-export default function SearchPage() {
-  const trpc = useTRPC()
+export default function SearchPage({ loaderData }: Route.ComponentProps) {
+  const navigation = useNavigation()
   const [searchParams, setSearchParams] = useSearchParams()
 
   const urlZip = searchParams.get('zip') ?? ''
@@ -85,21 +113,8 @@ export default function SearchPage() {
   const [queryInput, setQueryInput] = useState(urlQuery)
 
   const hasSearched = !!urlZip
-
-  const { data, isLoading, error } = useQuery(
-    trpc.gathering.search.queryOptions(
-      {
-        zipCode: urlZip,
-        radius: urlRadius,
-        query: urlQuery || undefined,
-        gameTypes: urlTypes && urlTypes.length > 0 ? urlTypes : undefined,
-        sortBy: urlSort,
-        page: urlPage,
-        pageSize: 20,
-      },
-      { enabled: hasSearched },
-    ),
-  )
+  const isLoading = navigation.state === 'loading'
+  const data = loaderData.results
 
   function updateSearchParams(updates: Record<string, string | undefined>) {
     const newParams = new URLSearchParams(searchParams)
@@ -274,14 +289,6 @@ export default function SearchPage() {
                     className="h-32 animate-pulse rounded-lg border border-border bg-card/40"
                   />
                 ))}
-              </div>
-            )}
-
-            {error && (
-              <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive">
-                {error.message === 'Invalid ZIP code'
-                  ? 'That ZIP code was not found. Please enter a valid 5-digit US ZIP code.'
-                  : 'Something went wrong. Please try again.'}
               </div>
             )}
 
