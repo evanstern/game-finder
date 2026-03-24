@@ -8,6 +8,10 @@ export default defineConfig({
   build: {
     target: 'esnext',
   },
+  server: {
+    host: true,
+    port: 3000,
+  },
   plugins: [
     reactRouterHonoServer(),
     tailwindcss(),
