@@ -108,7 +108,11 @@ export const gatheringRouter = createRouter({
         .selectFrom('gathering')
         .selectAll()
         .where('id', '=', input.id)
-        .executeTakeFirstOrThrow()
+        .executeTakeFirst()
+
+      if (!existing) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Gathering not found' })
+      }
 
       if (existing.host_id !== ctx.userId) {
         throw new TRPCError({ code: 'FORBIDDEN', message: 'Not the owner' })
