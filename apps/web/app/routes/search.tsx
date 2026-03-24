@@ -12,6 +12,14 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@game-finder/ui/components/pagination'
+import { RadioGroup, RadioGroupItem } from '@game-finder/ui/components/radio-group'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@game-finder/ui/components/select'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
@@ -163,24 +171,21 @@ export default function SearchPage() {
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label
-              htmlFor="radius"
-              className="text-xs text-muted-foreground"
-            >
+            <Label className="text-xs text-muted-foreground">
               Radius
             </Label>
-            <select
-              id="radius"
-              value={radiusInput}
-              onChange={(e) => setRadiusInput(Number(e.target.value))}
-              className="h-9 rounded-md border border-input bg-transparent px-3 text-sm text-foreground"
-            >
-              {RADIUS_OPTIONS.map((r) => (
-                <option key={r} value={r}>
-                  {r} miles
-                </option>
-              ))}
-            </select>
+            <Select value={String(radiusInput)} onValueChange={(v) => setRadiusInput(Number(v))}>
+              <SelectTrigger className="w-28" size="sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {RADIUS_OPTIONS.map((r) => (
+                  <SelectItem key={r} value={String(r)}>
+                    {r} miles
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex min-w-0 flex-1 flex-col gap-1.5">
             <Label
@@ -197,7 +202,7 @@ export default function SearchPage() {
               onChange={(e) => setQueryInput(e.target.value)}
             />
           </div>
-          <Button type="submit" className="h-9">
+          <Button type="submit" size="sm">
             Search
           </Button>
         </div>
@@ -243,30 +248,16 @@ export default function SearchPage() {
                 <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Sort By
                 </h3>
-                <div className="space-y-2">
+                <RadioGroup value={urlSort} onValueChange={(v) => setSort(v as 'distance' | 'next_session')}>
                   <label className="flex cursor-pointer items-center gap-2">
-                    <input
-                      type="radio"
-                      name="sort"
-                      checked={urlSort === 'distance'}
-                      onChange={() => setSort('distance')}
-                      className="accent-primary"
-                    />
+                    <RadioGroupItem value="distance" />
                     <span className="text-sm text-foreground">Distance</span>
                   </label>
                   <label className="flex cursor-pointer items-center gap-2">
-                    <input
-                      type="radio"
-                      name="sort"
-                      checked={urlSort === 'next_session'}
-                      onChange={() => setSort('next_session')}
-                      className="accent-primary"
-                    />
-                    <span className="text-sm text-foreground">
-                      Next Session
-                    </span>
+                    <RadioGroupItem value="next_session" />
+                    <span className="text-sm text-foreground">Next Session</span>
                   </label>
-                </div>
+                </RadioGroup>
               </div>
             </div>
           </aside>

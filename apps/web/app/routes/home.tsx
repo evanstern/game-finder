@@ -1,3 +1,6 @@
+import { Badge } from '@game-finder/ui/components/badge'
+import { Button } from '@game-finder/ui/components/button'
+import { Input } from '@game-finder/ui/components/input'
 import { Logo } from '@game-finder/ui/components/logo'
 import { useQuery } from '@tanstack/react-query'
 import { Fragment, useState } from 'react'
@@ -49,40 +52,38 @@ function SearchCard() {
   return (
     <div className="bg-white/[0.04] border border-[rgba(255,191,71,0.15)] rounded-xl p-5 max-w-[420px] mx-auto">
       <div className="flex flex-col md:flex-row gap-2 mb-3">
-        <input
+        <Input
           type="text"
           placeholder="Zip Code"
           maxLength={5}
           value={zip}
           onChange={(e) => setZip(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="bg-black/30 border border-[rgba(255,191,71,0.15)] rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 w-full md:w-28"
+          className="w-full md:w-28"
         />
-        <input
+        <Input
           type="text"
           placeholder="Game type..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="bg-black/30 border border-[rgba(255,191,71,0.15)] rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 flex-1"
+          className="flex-1"
         />
-        <button
-          onClick={handleSearch}
-          className="bg-primary text-primary-foreground rounded-lg px-4 py-2 text-sm font-bold whitespace-nowrap"
-        >
+        <Button onClick={handleSearch} size="sm">
           Search
-        </button>
+        </Button>
       </div>
 
       <div className="flex flex-wrap gap-1.5">
         {POPULAR_TAGS.map((tag) => (
-          <button
+          <Badge
             key={tag.label}
+            variant="outline"
+            className="cursor-pointer border-primary/20 bg-primary/10 text-primary hover:bg-primary/20"
             onClick={() => handleTagClick(tag.label)}
-            className="bg-[rgba(255,191,71,0.1)] border border-[rgba(255,191,71,0.15)] text-primary rounded-full px-2.5 py-0.5 text-xs cursor-pointer"
           >
             {tag.emoji} {tag.label}
-          </button>
+          </Badge>
         ))}
       </div>
     </div>

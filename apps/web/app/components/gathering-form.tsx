@@ -8,6 +8,13 @@ import {
 } from '@game-finder/ui/components/card'
 import { Input } from '@game-finder/ui/components/input'
 import { Label } from '@game-finder/ui/components/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@game-finder/ui/components/select'
 import { Badge } from '@game-finder/ui/components/badge'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
@@ -132,17 +139,17 @@ export function GatheringForm({
               <Input id="zipCode" value={zipCode} onChange={(e) => setZipCode(e.target.value)} placeholder="90210" required />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="scheduleType" className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Schedule</Label>
-              <select
-                id="scheduleType"
-                value={scheduleType}
-                onChange={(e) => setScheduleType(e.target.value as GatheringFormData['scheduleType'])}
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors"
-              >
-                {SCHEDULE_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
+              <Label className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Schedule</Label>
+              <Select value={scheduleType} onValueChange={(v) => setScheduleType(v as GatheringFormData['scheduleType'])}>
+                <SelectTrigger className="w-full" size="sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SCHEDULE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="startsAt" className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Date & Time</Label>

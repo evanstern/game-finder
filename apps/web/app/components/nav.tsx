@@ -1,3 +1,4 @@
+import { Button } from '@game-finder/ui/components/button'
 import { Logo } from '@game-finder/ui/components/logo'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
@@ -27,14 +28,16 @@ export function Nav() {
         <Link to="/" className="flex items-center">
           <Logo size="sm" />
         </Link>
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon"
           className="md:hidden text-muted-foreground"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           aria-label="Toggle menu"
         >
           {mobileMenuOpen ? '✕' : '☰'}
-        </button>
+        </Button>
         <div className="hidden md:flex items-center gap-5">
           <Link to="/search" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
             Find Games
@@ -55,14 +58,16 @@ export function Nav() {
               >
                 Dashboard
               </Link>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => logoutMutation.mutate()}
                 disabled={logoutMutation.isPending}
-                className="text-sm text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+                className="text-muted-foreground hover:text-foreground"
               >
                 Log Out
-              </button>
+              </Button>
             </>
           ) : (
             <>
@@ -89,13 +94,15 @@ export function Nav() {
           {user ? (
             <>
               <span className="text-sm font-medium text-primary">{user.displayName}</span>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => { logoutMutation.mutate(); setMobileMenuOpen(false) }}
-                className="text-sm text-muted-foreground text-left"
+                className="text-muted-foreground justify-start"
               >
                 Log Out
-              </button>
+              </Button>
             </>
           ) : (
             <>
