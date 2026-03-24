@@ -7,3 +7,6 @@ build/
 *.tsbuildinfo
 .react-router/
 .worktrees/
+.playwright-mcp/
+.vite/
+*.png
