@@ -29,7 +29,15 @@ export function TRPCReactProvider({ children }: { children: React.ReactNode }) {
           url:
             typeof window !== 'undefined'
               ? '/trpc'
-              : `${process.env.SERVER_URL ?? 'http://localhost:4000'}/trpc`,
+              : (() => {
+                  const serverUrl = process.env.SERVER_URL
+                  if (!serverUrl) {
+                    throw new Error(
+                      'SERVER_URL environment variable is required',
+                    )
+                  }
+                  return `${serverUrl}/trpc`
+                })(),
         }),
       ],
     }),
