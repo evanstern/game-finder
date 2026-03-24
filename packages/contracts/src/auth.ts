@@ -1,13 +1,13 @@
 import { z } from 'zod'
 
 export const registerInputSchema = z.object({
-  email: z.string().email().toLowerCase().trim(),
+  email: z.string().trim().toLowerCase().email(),
   password: z.string().min(8),
   displayName: z.string().min(1).max(100).trim(),
 })
 
 export const loginInputSchema = z.object({
-  email: z.string().email().toLowerCase().trim(),
+  email: z.string().trim().toLowerCase().email(),
   password: z.string().min(1),
 })
 
