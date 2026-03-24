@@ -29,6 +29,8 @@ export default await createHonoServer({
         headers.append('set-cookie', cookie)
       }
 
+      headers.set('cache-control', 'no-store')
+
       return new Response(res.body, {
         status: res.status,
         statusText: res.statusText,
