@@ -141,7 +141,7 @@ export default function Home() {
         </div>
 
         <div className="border-t border-[rgba(255,191,71,0.08)] mt-10 pt-8 pb-6 px-6">
-          <p className="text-center text-xs text-[rgba(255,191,71,0.5)] uppercase tracking-[3px] mb-5">
+          <p className="text-center text-xs text-[rgba(255,191,71,0.5)] uppercase tracking-[0.2em] mb-5">
             How It Works
           </p>
           <div className="flex flex-col md:flex-row gap-4 md:gap-4 justify-center items-center max-w-lg mx-auto">
