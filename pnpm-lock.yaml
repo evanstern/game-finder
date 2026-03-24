@@ -18,6 +18,10 @@ importers:
         specifier: ^5.7.0
         version: 5.9.3
 
+  packages/contracts: {}
+
+  packages/shared: {}
+
 packages:
 
   '@biomejs/biome@1.9.4':
