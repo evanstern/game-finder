@@ -12,7 +12,6 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@game-finder/ui/components/pagination'
-import { RadioGroup, RadioGroupItem } from '@game-finder/ui/components/radio-group'
 import {
   Select,
   SelectContent,
@@ -248,16 +247,24 @@ export default function SearchPage() {
                 <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Sort By
                 </h3>
-                <RadioGroup value={urlSort} onValueChange={(v) => setSort(v as 'distance' | 'next_session')}>
-                  <label className="flex cursor-pointer items-center gap-2">
-                    <RadioGroupItem value="distance" />
-                    <span className="text-sm text-foreground">Distance</span>
-                  </label>
-                  <label className="flex cursor-pointer items-center gap-2">
-                    <RadioGroupItem value="next_session" />
-                    <span className="text-sm text-foreground">Next Session</span>
-                  </label>
-                </RadioGroup>
+                <div className="flex flex-col gap-1">
+                  <Button
+                    variant={urlSort === 'distance' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className={urlSort === 'distance' ? 'justify-start text-primary' : 'justify-start text-muted-foreground'}
+                    onClick={() => setSort('distance')}
+                  >
+                    Distance
+                  </Button>
+                  <Button
+                    variant={urlSort === 'next_session' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className={urlSort === 'next_session' ? 'justify-start text-primary' : 'justify-start text-muted-foreground'}
+                    onClick={() => setSort('next_session')}
+                  >
+                    Next Session
+                  </Button>
+                </div>
               </div>
             </div>
           </aside>
