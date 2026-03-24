@@ -1,7 +1,7 @@
 import { Kysely, PostgresDialect } from 'kysely'
 import pg from 'pg'
-import type { Database } from './types.js'
 import { getDbConfig } from './env.js'
+import type { Database } from './types.js'
 
 const { Pool } = pg
 
