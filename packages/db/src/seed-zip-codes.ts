@@ -31,9 +31,9 @@ function parseCsvLine(header: string[], line: string): Record<string, string> {
   values.push(current.trim())
 
   const record: Record<string, string> = {}
-  for (let i = 0; i < header.length; i++) {
-    record[header[i]] = values[i] ?? ''
-  }
+  header.forEach((key, i) => {
+    record[key] = values[i] ?? ''
+  })
   return record
 }
 
