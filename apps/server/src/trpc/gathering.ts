@@ -6,45 +6,11 @@ import {
 } from '@game-finder/contracts/gathering'
 import { searchGatheringsSchema } from '@game-finder/contracts/search'
 import { sql } from '@game-finder/db'
+import { serializeGame, serializeGathering } from '@game-finder/db/serializers'
 import { computeNextOccurrence } from '../gathering/next-occurrence.js'
 import { stripMarkdownPreview } from '../gathering/strip-markdown.js'
 import type { Context } from './context.js'
 import { createRouter, protectedProcedure, publicProcedure } from './init.js'
-interface GatheringRow {
-  id: string
-  host_id: string
-  title: string
-  description: string
-  zip_code: string
-  schedule_type: 'once' | 'weekly' | 'biweekly' | 'monthly'
-  starts_at: Date
-  end_date: Date | null
-  duration_minutes: number | null
-  max_players: number | null
-  status: 'active' | 'closed'
-  next_occurrence_at: Date | null
-  created_at: Date
-  updated_at: Date
-}
-
-function serializeGathering(row: GatheringRow) {
-  return {
-    id: row.id,
-    hostId: row.host_id,
-    title: row.title,
-    description: row.description,
-    zipCode: row.zip_code,
-    scheduleType: row.schedule_type,
-    startsAt: row.starts_at,
-    endDate: row.end_date,
-    durationMinutes: row.duration_minutes,
-    maxPlayers: row.max_players,
-    status: row.status,
-    nextOccurrenceAt: row.next_occurrence_at,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  }
-}
 
 async function fetchGamesForGathering(ctx: { db: Context['db'] }, gatheringId: string) {
   const rows = await ctx.db
@@ -54,17 +20,29 @@ async function fetchGamesForGathering(ctx: { db: Context['db'] }, gatheringId: s
     .where('gathering_game.gathering_id', '=', gatheringId)
     .execute()
 
-  return rows.map((g: { id: string; name: string; type: string; description: string; min_players: number; max_players: number; image_url: string | null; created_at: Date; updated_at: Date }) => ({
-    id: g.id,
-    name: g.name,
-    type: g.type,
-    description: g.description,
-    minPlayers: g.min_players,
-    maxPlayers: g.max_players,
-    imageUrl: g.image_url,
-    createdAt: g.created_at,
-    updatedAt: g.updated_at,
-  }))
+  return rows.map(serializeGame)
+}
+
+async function ensureGatheringOwner(
+  db: Context['db'],
+  gatheringId: string,
+  userId: string,
+) {
+  const existing = await db
+    .selectFrom('gathering')
+    .select(['id', 'host_id'])
+    .where('id', '=', gatheringId)
+    .executeTakeFirst()
+
+  if (!existing) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Gathering not found' })
+  }
+
+  if (existing.host_id !== userId) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Not the owner' })
+  }
+
+  return existing
 }
 
 export const gatheringRouter = createRouter({
@@ -142,29 +120,30 @@ export const gatheringRouter = createRouter({
 
       const { id, gameIds, ...fields } = input
 
-      const updateValues: Record<string, unknown> = {}
-      if (fields.title !== undefined) updateValues.title = fields.title
-      if (fields.description !== undefined) updateValues.description = fields.description
-      if (fields.zipCode !== undefined) updateValues.zip_code = fields.zipCode
-      if (fields.scheduleType !== undefined) updateValues.schedule_type = fields.scheduleType
-      if (fields.startsAt !== undefined) updateValues.starts_at = new Date(fields.startsAt)
-      if (fields.endDate !== undefined) updateValues.end_date = fields.endDate ? new Date(fields.endDate) : null
-      if (fields.durationMinutes !== undefined) updateValues.duration_minutes = fields.durationMinutes
-      if (fields.maxPlayers !== undefined) updateValues.max_players = fields.maxPlayers
-
       const scheduleType = fields.scheduleType ?? existing.schedule_type
       const startsAt = fields.startsAt ? new Date(fields.startsAt) : existing.starts_at
       const endDate = fields.endDate !== undefined
         ? (fields.endDate ? new Date(fields.endDate) : null)
         : existing.end_date
-
       const nextOccurrenceAt = computeNextOccurrence(scheduleType, startsAt, endDate)
-      updateValues.next_occurrence_at = nextOccurrenceAt
-      updateValues.updated_at = new Date()
 
-      const updated = await ctx.db
+      let query = ctx.db
         .updateTable('gathering')
-        .set(updateValues)
+        .set({
+          next_occurrence_at: nextOccurrenceAt,
+          updated_at: new Date(),
+        })
+
+      if (fields.title !== undefined) query = query.set({ title: fields.title })
+      if (fields.description !== undefined) query = query.set({ description: fields.description })
+      if (fields.zipCode !== undefined) query = query.set({ zip_code: fields.zipCode })
+      if (fields.scheduleType !== undefined) query = query.set({ schedule_type: fields.scheduleType })
+      if (fields.startsAt !== undefined) query = query.set({ starts_at: new Date(fields.startsAt) })
+      if (fields.endDate !== undefined) query = query.set({ end_date: fields.endDate ? new Date(fields.endDate) : null })
+      if (fields.durationMinutes !== undefined) query = query.set({ duration_minutes: fields.durationMinutes })
+      if (fields.maxPlayers !== undefined) query = query.set({ max_players: fields.maxPlayers })
+
+      const updated = await query
         .where('id', '=', id)
         .returningAll()
         .executeTakeFirstOrThrow()
@@ -195,19 +174,7 @@ export const gatheringRouter = createRouter({
   delete: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ input, ctx }) => {
-      const existing = await ctx.db
-        .selectFrom('gathering')
-        .select(['id', 'host_id'])
-        .where('id', '=', input.id)
-        .executeTakeFirst()
-
-      if (!existing) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Gathering not found' })
-      }
-
-      if (existing.host_id !== ctx.userId) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Not the owner' })
-      }
+      await ensureGatheringOwner(ctx.db, input.id, ctx.userId)
 
       await ctx.db
         .deleteFrom('gathering')
@@ -220,19 +187,7 @@ export const gatheringRouter = createRouter({
   close: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ input, ctx }) => {
-      const existing = await ctx.db
-        .selectFrom('gathering')
-        .selectAll()
-        .where('id', '=', input.id)
-        .executeTakeFirst()
-
-      if (!existing) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Gathering not found' })
-      }
-
-      if (existing.host_id !== ctx.userId) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Not the owner' })
-      }
+      await ensureGatheringOwner(ctx.db, input.id, ctx.userId)
 
       const updated = await ctx.db
         .updateTable('gathering')
@@ -250,23 +205,8 @@ export const gatheringRouter = createRouter({
       const row = await ctx.db
         .selectFrom('gathering')
         .innerJoin('users', 'users.id', 'gathering.host_id')
-        .select([
-          'gathering.id',
-          'gathering.host_id',
-          'gathering.title',
-          'gathering.description',
-          'gathering.zip_code',
-          'gathering.schedule_type',
-          'gathering.starts_at',
-          'gathering.end_date',
-          'gathering.duration_minutes',
-          'gathering.max_players',
-          'gathering.status',
-          'gathering.next_occurrence_at',
-          'gathering.created_at',
-          'gathering.updated_at',
-          'users.display_name as host_display_name',
-        ])
+        .selectAll('gathering')
+        .select('users.display_name as host_display_name')
         .where('gathering.id', '=', input.id)
         .executeTakeFirst()
 
@@ -277,9 +217,9 @@ export const gatheringRouter = createRouter({
       const games = await fetchGamesForGathering(ctx, row.id)
 
       return {
-        ...serializeGathering(row as unknown as GatheringRow),
+        ...serializeGathering(row),
         host: {
-          displayName: (row as Record<string, unknown>).host_display_name as string,
+          displayName: row.host_display_name,
         },
         games,
       }
@@ -294,7 +234,7 @@ export const gatheringRouter = createRouter({
         .orderBy('created_at', 'desc')
         .execute()
 
-      return rows.map((row) => serializeGathering(row))
+      return rows.map(serializeGathering)
     }),
 
   search: publicProcedure
@@ -302,7 +242,6 @@ export const gatheringRouter = createRouter({
     .query(async ({ input, ctx }) => {
       const { zipCode, radius, query, gameTypes, sortBy, page, pageSize } = input
 
-      // 1. Look up the searcher's ZIP
       const searchZip = await ctx.db
         .selectFrom('zip_code_location')
         .selectAll()
@@ -316,7 +255,6 @@ export const gatheringRouter = createRouter({
       const lat = Number(searchZip.latitude)
       const lng = Number(searchZip.longitude)
 
-      // Haversine distance SQL expression
       const distanceExpr = sql<number>`(
         3959 * acos(
           cos(radians(${lat})) * cos(radians(cast(${sql.ref('z.latitude')} as double precision))) *
@@ -325,7 +263,6 @@ export const gatheringRouter = createRouter({
         )
       )`
 
-      // 2. Build the base query
       let baseQuery = ctx.db
         .selectFrom('gathering')
         .innerJoin('zip_code_location as z', 'z.zip_code', 'gathering.zip_code')
@@ -333,7 +270,6 @@ export const gatheringRouter = createRouter({
         .where('gathering.status', '=', 'active')
         .where('gathering.next_occurrence_at', 'is not', null)
 
-      // 3. Keyword filter: match title or linked game name
       if (query) {
         const pattern = `%${query}%`
         baseQuery = baseQuery.where((eb) =>
@@ -351,7 +287,6 @@ export const gatheringRouter = createRouter({
         )
       }
 
-      // 4. Game type filter
       if (gameTypes && gameTypes.length > 0) {
         baseQuery = baseQuery.where((eb) =>
           eb.exists(
@@ -365,16 +300,13 @@ export const gatheringRouter = createRouter({
         )
       }
 
-      // 5. Radius filter
       baseQuery = baseQuery.where(distanceExpr, '<=', radius)
 
-      // 6. Count total
       const countResult = await baseQuery
         .select(sql<number>`count(*)`.as('count'))
         .executeTakeFirstOrThrow()
       const total = Number(countResult.count)
 
-      // 7. Fetch paginated results
       let resultsQuery = baseQuery
         .select([
           'gathering.id',
@@ -402,7 +334,6 @@ export const gatheringRouter = createRouter({
 
       const rows = await resultsQuery.execute()
 
-      // 8. Fetch games for each gathering
       const gatheringIds = rows.map((r) => r.id)
       const gamesMap: Map<string, Array<{ id: string; name: string; type: string }>> = new Map()
 
@@ -426,7 +357,6 @@ export const gatheringRouter = createRouter({
         }
       }
 
-      // 9. Serialize results
       const gatherings = rows.map((row) => ({
         id: row.id,
         title: row.title,
@@ -438,9 +368,9 @@ export const gatheringRouter = createRouter({
         nextOccurrenceAt: row.next_occurrence_at,
         maxPlayers: row.max_players,
         status: row.status,
-        hostDisplayName: (row as Record<string, unknown>).host_display_name as string,
+        hostDisplayName: row.host_display_name,
         games: gamesMap.get(row.id) ?? [],
-        locationLabel: `${(row as Record<string, unknown>).location_city}, ${(row as Record<string, unknown>).location_state}`,
+        locationLabel: `${row.location_city}, ${row.location_state}`,
       }))
 
       return {
