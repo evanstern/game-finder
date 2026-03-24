@@ -26,4 +26,9 @@ export default await createHonoServer({
       })
     })
   },
+  getLoadContext(c) {
+    return {
+      cookie: c.req.header('cookie') ?? '',
+    }
+  },
 })

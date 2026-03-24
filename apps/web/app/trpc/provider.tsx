@@ -20,7 +20,13 @@ function getQueryClient() {
   return browserQueryClient
 }
 
-export function TRPCReactProvider({ children }: { children: React.ReactNode }) {
+export function TRPCReactProvider({
+  children,
+  ssrCookie,
+}: {
+  children: React.ReactNode
+  ssrCookie?: string
+}) {
   const queryClient = getQueryClient()
   const [trpcClient] = useState(() =>
     createTRPCClient<AppRouter>({
@@ -38,6 +44,10 @@ export function TRPCReactProvider({ children }: { children: React.ReactNode }) {
                   }
                   return `${serverUrl}/trpc`
                 })(),
+          headers: () => {
+            if (typeof window !== 'undefined') return {}
+            return ssrCookie ? { cookie: ssrCookie } : {}
+          },
         }),
       ],
     }),

@@ -4,8 +4,10 @@
     "jsx": "react-jsx",
     "lib": ["DOM", "DOM.Iterable", "ES2022"],
     "outDir": "dist",
-    "rootDir": ".",
-    "types": ["vite/client"]
+    "rootDirs": [".", ".react-router/types"],
+    "types": ["vite/client"],
+    "declaration": false,
+    "declarationMap": false
   },
-  "include": ["app", "vite.config.ts", "react-router.config.ts"]
+  "include": [".react-router/types/**/*", "app", "vite.config.ts", "react-router.config.ts"]
 }

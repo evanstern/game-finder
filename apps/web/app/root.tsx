@@ -1,7 +1,19 @@
 import '@game-finder/ui/styles/globals.css'
 import { Suspense } from 'react'
-import { Links, Meta, Outlet, Scripts, ScrollRestoration } from 'react-router'
+import {
+  Links,
+  Meta,
+  Outlet,
+  Scripts,
+  ScrollRestoration,
+} from 'react-router'
+import type { Route } from './+types/root.js'
 import { TRPCReactProvider } from './trpc/provider.js'
+
+export function loader({ context }: Route.LoaderArgs) {
+  const ctx = context as { cookie?: string }
+  return { cookie: ctx?.cookie ?? '' }
+}
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -21,9 +33,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
   )
 }
 
-export default function Root() {
+export default function Root({ loaderData }: Route.ComponentProps) {
   return (
-    <TRPCReactProvider>
+    <TRPCReactProvider ssrCookie={loaderData.cookie}>
       <Suspense fallback={<div>Loading...</div>}>
         <Outlet />
       </Suspense>
