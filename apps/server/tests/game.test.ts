@@ -1,12 +1,8 @@
-import { afterAll, afterEach, describe, expect, it } from 'vitest'
-import { cleanup, createTestCaller, db, seedGames } from './helpers.js'
+import { afterEach, describe, expect, it } from 'vitest'
+import { cleanup, createTestCaller, seedGames } from './helpers.js'
 
 afterEach(async () => {
   await cleanup()
-})
-
-afterAll(async () => {
-  await db.destroy()
 })
 
 describe('game.list', () => {
