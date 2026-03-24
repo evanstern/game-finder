@@ -61,12 +61,12 @@ export default function SignUp() {
         <div className="absolute inset-0 bg-noise" />
       </div>
 
-      <Card className="animate-fade-in-up relative w-full max-w-sm border-border bg-card/80 backdrop-blur-sm glow-amber">
+      <Card className="animate-fade-in-up relative w-full max-w-sm border-border bg-card/80 backdrop-blur-sm">
         <CardHeader className="text-center">
-          <p className="font-display mb-1 text-[11px] font-semibold tracking-[0.2em] text-primary uppercase">
+          <p className="mb-1 text-[11px] font-semibold tracking-[0.2em] text-primary uppercase">
             Join the table
           </p>
-          <CardTitle className="font-display text-xl font-bold tracking-tight text-foreground">
+          <CardTitle className="text-xl font-bold tracking-tight text-foreground">
             Create an account
           </CardTitle>
         </CardHeader>
