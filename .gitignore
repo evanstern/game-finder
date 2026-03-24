@@ -6,3 +6,4 @@ build/
 .turbo/
 *.tsbuildinfo
 .react-router/
+.worktrees/
