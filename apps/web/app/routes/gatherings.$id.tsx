@@ -141,7 +141,7 @@ export default function GatheringDetails({ params }: Route.ComponentProps) {
       )}
 
       {gathering.description && (
-        <div className="animate-fade-in-up animation-delay-300 rounded-lg border border-border bg-card/40 p-6 backdrop-blur-sm prose prose-sm prose-invert max-w-none">
+        <div className="animate-fade-in-up animation-delay-300 rounded-lg border border-border bg-card/40 p-6 backdrop-blur-sm prose-themed">
           <ReactMarkdown>{gathering.description}</ReactMarkdown>
         </div>
       )}

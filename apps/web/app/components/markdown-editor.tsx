@@ -104,7 +104,7 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
           <div className="absolute top-0 left-0 right-0 border-b border-border bg-muted/30 px-3 py-1.5">
             <p className="text-[10px] font-semibold tracking-[0.15em] text-muted-foreground uppercase">Preview</p>
           </div>
-          <div className="min-h-[300px] overflow-auto bg-card/60 p-4 pt-8 prose prose-invert prose-sm max-w-none">
+          <div className="min-h-[300px] overflow-auto bg-card/60 p-4 pt-8 prose-themed">
             {value ? (
               <Markdown>{value}</Markdown>
             ) : (
