@@ -16,7 +16,8 @@ export default await createHonoServer({
           method: c.req.method,
           headers: c.req.raw.headers,
           body: c.req.raw.body,
-        }),
+          duplex: 'half',
+        } as RequestInit),
       )
 
       return new Response(res.body, {
