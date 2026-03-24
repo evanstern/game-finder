@@ -15,6 +15,7 @@ import {
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
+import { MapBackground } from '../components/map-background.js'
 import { useTRPC } from '../trpc/provider.js'
 
 type GameType = 'board_game' | 'ttrpg' | 'card_game'
@@ -139,7 +140,9 @@ export default function SearchPage() {
   const totalPages = data ? Math.ceil(data.total / data.pageSize) : 0
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-8">
+    <div className="relative min-h-[calc(100vh-65px)]">
+      <MapBackground />
+      <div className="relative z-10 mx-auto max-w-5xl px-6 py-10">
       {/* Search Form */}
       <form onSubmit={handleSearch} className="mb-8">
         <div className="flex flex-wrap items-end gap-3">
@@ -170,7 +173,7 @@ export default function SearchPage() {
               id="radius"
               value={radiusInput}
               onChange={(e) => setRadiusInput(Number(e.target.value))}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+              className="h-9 rounded-md border border-input bg-transparent px-3 text-sm text-foreground"
             >
               {RADIUS_OPTIONS.map((r) => (
                 <option key={r} value={r}>
@@ -424,6 +427,7 @@ export default function SearchPage() {
           </main>
         </div>
       )}
+    </div>
     </div>
   )
 }
