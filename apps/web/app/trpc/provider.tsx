@@ -48,6 +48,8 @@ export function TRPCReactProvider({
             if (typeof window !== 'undefined') return {}
             return ssrCookie ? { cookie: ssrCookie } : {}
           },
+          fetch: (input, init) =>
+            fetch(input, { ...init, credentials: 'include' }),
         }),
       ],
     }),
