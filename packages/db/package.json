@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./redis": "./src/redis.ts"
+    "./redis": "./src/redis.ts",
+    "./serializers": "./src/serializers.ts"
   },
   "scripts": {
     "lint": "biome check .",
