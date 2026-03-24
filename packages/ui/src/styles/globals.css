@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@source "../../..";
+@source "../../../../../apps/web/app";
 @plugin "@tailwindcss/typography";
 
 @theme extend {
@@ -84,6 +86,11 @@
   50% { opacity: 0.05; }
 }
 
+@keyframes text-shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
 @layer utilities {
   .prose-themed {
     @apply prose prose-sm prose-invert max-w-none;
@@ -104,6 +111,10 @@
   }
   .animate-glow-breathe {
     animation: glow-breathe 6s ease-in-out infinite;
+  }
+  .animate-text-shimmer {
+    background-size: 200% auto;
+    animation: text-shimmer 4s linear infinite;
   }
   .animation-delay-100 { animation-delay: 100ms; }
   .animation-delay-200 { animation-delay: 200ms; }
