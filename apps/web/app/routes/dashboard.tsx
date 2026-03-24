@@ -3,6 +3,7 @@ import { Button } from '@game-finder/ui/components/button'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router'
+import { MapBackground } from '../components/map-background.js'
 import { useTRPC } from '../trpc/provider.js'
 
 export default function Dashboard() {
@@ -39,12 +40,9 @@ export default function Dashboard() {
 
   return (
     <div className="relative min-h-[calc(100vh-65px)]">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-1/2 top-1/4 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary opacity-[0.03] blur-[100px]" />
-        <div className="absolute inset-0 bg-noise" />
-      </div>
+      <MapBackground />
 
-    <div className="relative mx-auto max-w-3xl px-4 py-10 space-y-8">
+    <div className="relative z-10 mx-auto max-w-4xl px-6 py-10 space-y-8">
       <div className="animate-fade-in-up flex items-center justify-between">
         <div className="space-y-1">
           <p className="text-[11px] font-semibold tracking-[0.2em] text-primary uppercase">

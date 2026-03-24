@@ -1,7 +1,6 @@
 import { Badge } from '@game-finder/ui/components/badge'
 import { Button } from '@game-finder/ui/components/button'
 import { Card, CardContent } from '@game-finder/ui/components/card'
-import { Checkbox } from '@game-finder/ui/components/checkbox'
 import { Input } from '@game-finder/ui/components/input'
 import { Label } from '@game-finder/ui/components/label'
 import {
@@ -12,9 +11,17 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@game-finder/ui/components/pagination'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@game-finder/ui/components/select'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
+import { MapBackground } from '../components/map-background.js'
 import { useTRPC } from '../trpc/provider.js'
 
 type GameType = 'board_game' | 'ttrpg' | 'card_game'
@@ -139,7 +146,9 @@ export default function SearchPage() {
   const totalPages = data ? Math.ceil(data.total / data.pageSize) : 0
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-8">
+    <div className="relative min-h-[calc(100vh-65px)]">
+      <MapBackground />
+      <div className="relative z-10 mx-auto max-w-5xl px-6 py-10">
       {/* Search Form */}
       <form onSubmit={handleSearch} className="mb-8">
         <div className="flex flex-wrap items-end gap-3">
@@ -160,24 +169,21 @@ export default function SearchPage() {
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label
-              htmlFor="radius"
-              className="text-xs text-muted-foreground"
-            >
+            <Label className="text-xs text-muted-foreground">
               Radius
             </Label>
-            <select
-              id="radius"
-              value={radiusInput}
-              onChange={(e) => setRadiusInput(Number(e.target.value))}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-            >
-              {RADIUS_OPTIONS.map((r) => (
-                <option key={r} value={r}>
-                  {r} miles
-                </option>
-              ))}
-            </select>
+            <Select value={String(radiusInput)} onValueChange={(v) => setRadiusInput(Number(v))}>
+              <SelectTrigger className="w-28" size="sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {RADIUS_OPTIONS.map((r) => (
+                  <SelectItem key={r} value={String(r)}>
+                    {r} miles
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex min-w-0 flex-1 flex-col gap-1.5">
             <Label
@@ -194,7 +200,7 @@ export default function SearchPage() {
               onChange={(e) => setQueryInput(e.target.value)}
             />
           </div>
-          <Button type="submit" className="h-9">
+          <Button type="submit" size="sm">
             Search
           </Button>
         </div>
@@ -216,22 +222,19 @@ export default function SearchPage() {
                 <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Game Type
                 </h3>
-                <div className="space-y-2">
+                <div className="flex flex-col gap-1">
                   {(
                     Object.entries(GAME_TYPE_LABELS) as [GameType, string][]
                   ).map(([type, label]) => (
-                    <label
+                    <Button
                       key={type}
-                      className="flex cursor-pointer items-center gap-2"
+                      variant={urlTypes?.includes(type) ? 'secondary' : 'ghost'}
+                      size="sm"
+                      className={urlTypes?.includes(type) ? 'justify-start text-primary' : 'justify-start text-muted-foreground'}
+                      onClick={() => toggleGameType(type)}
                     >
-                      <Checkbox
-                        checked={urlTypes?.includes(type) ?? false}
-                        onCheckedChange={() => toggleGameType(type)}
-                      />
-                      <span className="text-sm text-foreground">
-                        {label}
-                      </span>
-                    </label>
+                      {label}
+                    </Button>
                   ))}
                 </div>
               </div>
@@ -240,29 +243,23 @@ export default function SearchPage() {
                 <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Sort By
                 </h3>
-                <div className="space-y-2">
-                  <label className="flex cursor-pointer items-center gap-2">
-                    <input
-                      type="radio"
-                      name="sort"
-                      checked={urlSort === 'distance'}
-                      onChange={() => setSort('distance')}
-                      className="accent-primary"
-                    />
-                    <span className="text-sm text-foreground">Distance</span>
-                  </label>
-                  <label className="flex cursor-pointer items-center gap-2">
-                    <input
-                      type="radio"
-                      name="sort"
-                      checked={urlSort === 'next_session'}
-                      onChange={() => setSort('next_session')}
-                      className="accent-primary"
-                    />
-                    <span className="text-sm text-foreground">
-                      Next Session
-                    </span>
-                  </label>
+                <div className="flex flex-col gap-1">
+                  <Button
+                    variant={urlSort === 'distance' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className={urlSort === 'distance' ? 'justify-start text-primary' : 'justify-start text-muted-foreground'}
+                    onClick={() => setSort('distance')}
+                  >
+                    Distance
+                  </Button>
+                  <Button
+                    variant={urlSort === 'next_session' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className={urlSort === 'next_session' ? 'justify-start text-primary' : 'justify-start text-muted-foreground'}
+                    onClick={() => setSort('next_session')}
+                  >
+                    Next Session
+                  </Button>
                 </div>
               </div>
             </div>
@@ -424,6 +421,7 @@ export default function SearchPage() {
           </main>
         </div>
       )}
+    </div>
     </div>
   )
 }
