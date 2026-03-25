@@ -9,6 +9,7 @@ import {
   leaveGatheringSchema,
   listParticipantsSchema,
 } from '@game-finder/contracts/participant'
+import { friendActivityInputSchema } from '@game-finder/contracts/friendship'
 import { searchGatheringsSchema } from '@game-finder/contracts/search'
 import { sql } from '@game-finder/db'
 import { serializeGame, serializeGathering, serializeParticipant } from '@game-finder/db/serializers'
@@ -435,6 +436,139 @@ export const gatheringRouter = createRouter({
         ...serializeGathering(row),
         participantStatus: row.participant_status,
       }))
+    }),
+
+  friendActivity: protectedProcedure
+    .input(friendActivityInputSchema)
+    .query(async ({ input, ctx }) => {
+      const { page, pageSize } = input
+
+      // Get accepted friend IDs
+      const friendRows = await ctx.db
+        .selectFrom('friendship')
+        .select(['requester_id', 'addressee_id'])
+        .where('status', '=', 'accepted')
+        .where((eb) =>
+          eb.or([
+            eb('requester_id', '=', ctx.userId),
+            eb('addressee_id', '=', ctx.userId),
+          ]),
+        )
+        .execute()
+
+      const friendIds = friendRows.map((r) =>
+        r.requester_id === ctx.userId ? r.addressee_id : r.requester_id,
+      )
+
+      if (friendIds.length === 0) {
+        return { gatherings: [], total: 0, page, pageSize }
+      }
+
+      // Base query: public, active gatherings with next_occurrence_at
+      // where a friend is host OR a joined participant
+      // excluding gatherings the current user is involved in
+      let baseQuery = ctx.db
+        .selectFrom('gathering')
+        .where('gathering.visibility', '=', 'public')
+        .where('gathering.status', '=', 'active')
+        .where('gathering.next_occurrence_at', 'is not', null)
+        .where('gathering.host_id', '!=', ctx.userId)
+        .where((eb) =>
+          eb.not(
+            eb.exists(
+              eb.selectFrom('gathering_participant')
+                .select(sql.lit(1).as('one'))
+                .where('user_id', '=', ctx.userId)
+                .whereRef('gathering_id', '=', 'gathering.id'),
+            ),
+          ),
+        )
+        .where((eb) =>
+          eb.or([
+            eb('gathering.host_id', 'in', friendIds),
+            eb.exists(
+              eb.selectFrom('gathering_participant')
+                .select(sql.lit(1).as('one'))
+                .where('user_id', 'in', friendIds)
+                .where('status', '=', 'joined')
+                .whereRef('gathering_id', '=', 'gathering.id'),
+            ),
+          ]),
+        )
+
+      // Count total
+      const countResult = await baseQuery
+        .select(sql<number>`count(*)`.as('count'))
+        .executeTakeFirstOrThrow()
+      const total = Number(countResult.count)
+
+      // Fetch paginated results
+      const rows = await baseQuery
+        .selectAll('gathering')
+        .orderBy('gathering.next_occurrence_at', 'asc')
+        .limit(pageSize)
+        .offset((page - 1) * pageSize)
+        .execute()
+
+      // For each gathering, determine which friends are involved and their role
+      const gatheringIds = rows.map((r) => r.id)
+      const friendsMap = new Map<string, Array<{ friendId: string; displayName: string; role: 'host' | 'participant' }>>()
+
+      if (gatheringIds.length > 0) {
+        // Friends who are hosts
+        const hostFriendIds = rows
+          .filter((r) => friendIds.includes(r.host_id))
+          .map((r) => r.host_id)
+
+        if (hostFriendIds.length > 0) {
+          const hostUsers = await ctx.db
+            .selectFrom('users')
+            .select(['id', 'display_name'])
+            .where('id', 'in', hostFriendIds)
+            .execute()
+
+          const hostNameMap = new Map(hostUsers.map((u) => [u.id, u.display_name]))
+
+          for (const row of rows) {
+            if (friendIds.includes(row.host_id)) {
+              const existing = friendsMap.get(row.id) ?? []
+              existing.push({
+                friendId: row.host_id,
+                displayName: hostNameMap.get(row.host_id) ?? 'Unknown',
+                role: 'host',
+              })
+              friendsMap.set(row.id, existing)
+            }
+          }
+        }
+
+        // Friends who are participants
+        const participantRows = await ctx.db
+          .selectFrom('gathering_participant')
+          .innerJoin('users', 'users.id', 'gathering_participant.user_id')
+          .select([
+            'gathering_participant.gathering_id',
+            'gathering_participant.user_id',
+            'users.display_name',
+          ])
+          .where('gathering_participant.gathering_id', 'in', gatheringIds)
+          .where('gathering_participant.user_id', 'in', friendIds)
+          .where('gathering_participant.status', '=', 'joined')
+          .execute()
+
+        for (const row of participantRows) {
+          const existing = friendsMap.get(row.gathering_id) ?? []
+          existing.push({ friendId: row.user_id, displayName: row.display_name, role: 'participant' })
+          friendsMap.set(row.gathering_id, existing)
+        }
+      }
+
+      const gatherings = rows.map((row) => ({
+        ...serializeGathering(row),
+        friends: friendsMap.get(row.id) ?? [],
+      }))
+
+      return { gatherings, total, page, pageSize }
     }),
 
   search: publicProcedure

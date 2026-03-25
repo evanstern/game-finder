@@ -25,7 +25,21 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
   const url = new URL(request.url)
   const joinCode = url.searchParams.get('code') ?? undefined
 
-  return { gathering, user, participants, joinCode }
+  let outgoingRequests: Array<{ addresseeId: string }> = []
+  let incomingRequests: Array<{ requesterId: string }> = []
+  let friends: Array<{ friendId: string }> = []
+  if (user) {
+    const [outgoing, incoming, friendList] = await Promise.all([
+      trpc.friendship.listOutgoingRequests.query().catch(() => []),
+      trpc.friendship.listIncomingRequests.query().catch(() => []),
+      trpc.friendship.listFriends.query().catch(() => []),
+    ])
+    outgoingRequests = outgoing
+    incomingRequests = incoming
+    friends = friendList
+  }
+
+  return { gathering, user, participants, joinCode, outgoingRequests, incomingRequests, friends }
 }
 
 export async function action({ request, params, context }: Route.ActionArgs) {
@@ -44,6 +58,9 @@ export async function action({ request, params, context }: Route.ActionArgs) {
     })
   } else if (intent === 'leave') {
     await trpc.gathering.leave.mutate({ gatheringId: params.id })
+  } else if (intent === 'sendFriendRequest') {
+    const targetUserId = String(formData.get('targetUserId'))
+    await trpc.friendship.sendRequest.mutate({ userId: targetUserId })
   }
 
   return redirect(`/gatherings/${params.id}`)
@@ -95,7 +112,7 @@ function JoinForm({
 }
 
 export default function GatheringDetails({ loaderData }: Route.ComponentProps) {
-  const { gathering, user, participants, joinCode } = loaderData
+  const { gathering, user, participants, joinCode, outgoingRequests, incomingRequests, friends } = loaderData
   const isOwner = user?.id === gathering.hostId
 
   return (
@@ -111,9 +128,24 @@ export default function GatheringDetails({ loaderData }: Route.ComponentProps) {
           <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-4xl">
             {gathering.title}
           </h1>
-          <p className="text-sm text-muted-foreground">
-            Hosted by <span className="font-medium text-primary">{gathering.host.displayName}</span>
-          </p>
+          <div className="text-sm text-muted-foreground flex items-center gap-2 flex-wrap">
+            <span>Hosted by <span className="font-medium text-primary">{gathering.host.displayName}</span></span>
+            {user && !isOwner && (() => {
+              const hostIsFriend = friends.some((f) => f.friendId === gathering.hostId)
+              const hostIsPending = outgoingRequests.some((r) => r.addresseeId === gathering.hostId) || incomingRequests.some((r) => r.requesterId === gathering.hostId)
+              if (hostIsFriend) return <span className="text-[10px] text-primary">Friend</span>
+              if (hostIsPending) return <span className="text-[10px] text-muted-foreground">Request Pending</span>
+              return (
+                <Form method="post" className="inline">
+                  <input type="hidden" name="intent" value="sendFriendRequest" />
+                  <input type="hidden" name="targetUserId" value={gathering.hostId} />
+                  <Button type="submit" variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground">
+                    + Add Friend
+                  </Button>
+                </Form>
+              )
+            })()}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant={gathering.status === 'active' ? 'default' : 'secondary'}>
@@ -181,17 +213,39 @@ export default function GatheringDetails({ loaderData }: Route.ComponentProps) {
         </div>
 
         {participants.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {participants.map((p) => (
-              <Badge
-                key={p.id}
-                variant={p.status === 'joined' ? 'outline' : 'secondary'}
-                className={p.status === 'joined' ? 'border-primary/30 text-primary' : ''}
-              >
-                {p.displayName}
-                {p.status === 'waitlisted' && ' (waitlisted)'}
-              </Badge>
-            ))}
+          <div className="space-y-2">
+            {participants.map((p) => {
+              const isSelf = user?.id === p.userId
+              const isFriend = friends.some((f) => f.friendId === p.userId)
+              const isPending = outgoingRequests.some((r) => r.addresseeId === p.userId) || incomingRequests.some((r) => r.requesterId === p.userId)
+
+              return (
+                <div key={p.id} className="flex items-center gap-2">
+                  <Badge
+                    variant={p.status === 'joined' ? 'outline' : 'secondary'}
+                    className={p.status === 'joined' ? 'border-primary/30 text-primary' : ''}
+                  >
+                    {p.displayName}
+                    {p.status === 'waitlisted' && ' (waitlisted)'}
+                  </Badge>
+                  {user && !isSelf && !isFriend && !isPending && (
+                    <Form method="post" className="inline">
+                      <input type="hidden" name="intent" value="sendFriendRequest" />
+                      <input type="hidden" name="targetUserId" value={p.userId} />
+                      <Button type="submit" variant="ghost" size="sm" className="h-6 px-2 text-[11px] text-muted-foreground">
+                        + Add Friend
+                      </Button>
+                    </Form>
+                  )}
+                  {isPending && (
+                    <span className="text-[11px] text-muted-foreground">Pending</span>
+                  )}
+                  {isFriend && (
+                    <span className="text-[11px] text-primary">Friend</span>
+                  )}
+                </div>
+              )
+            })}
           </div>
         )}
 
