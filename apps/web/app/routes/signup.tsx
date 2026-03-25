@@ -8,7 +8,7 @@ import {
 } from '@game-finder/ui/components/card'
 import { Input } from '@game-finder/ui/components/input'
 import { Label } from '@game-finder/ui/components/label'
-import { Form, Link, redirect, useActionData, useNavigation } from 'react-router'
+import { Form, Link, redirect, useNavigation } from 'react-router'
 import { MapBackground } from '../components/map-background.js'
 import { createServerTRPC } from '../trpc/server.js'
 import type { Route } from './+types/signup.js'
