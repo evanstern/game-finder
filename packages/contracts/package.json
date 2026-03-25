@@ -9,7 +9,8 @@
     "./gathering": "./src/gathering.ts",
     "./game": "./src/game.ts",
     "./search": "./src/search.ts",
-    "./participant": "./src/participant.ts"
+    "./participant": "./src/participant.ts",
+    "./friendship": "./src/friendship.ts"
   },
   "scripts": {
     "lint": "biome check .",
