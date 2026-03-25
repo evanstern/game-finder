@@ -36,13 +36,13 @@ export async function action({ request, context }: Route.ActionArgs) {
       'content-type': 'application/json',
       ...(ctx.cookie ? { cookie: ctx.cookie } : {}),
     },
-    body: JSON.stringify({ json: { email, password } }),
+    body: JSON.stringify({ email, password }),
   })
 
   const body = await res.json()
 
   if (!res.ok || body.error) {
-    const message = body.error?.json?.message ?? 'Login failed'
+    const message = body.error?.message ?? 'Login failed'
     return { errors: { form: message } }
   }
 

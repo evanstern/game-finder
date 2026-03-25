@@ -37,13 +37,13 @@ export async function action({ request, context }: Route.ActionArgs) {
       'content-type': 'application/json',
       ...(ctx.cookie ? { cookie: ctx.cookie } : {}),
     },
-    body: JSON.stringify({ json: { displayName, email, password } }),
+    body: JSON.stringify({ displayName, email, password }),
   })
 
   const body = await res.json()
 
   if (!res.ok || body.error) {
-    const message = body.error?.json?.message ?? 'Registration failed'
+    const message = body.error?.message ?? 'Registration failed'
     if (message === 'Email already in use') {
       return { errors: { email: message } }
     }
