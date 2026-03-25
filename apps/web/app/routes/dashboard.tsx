@@ -17,7 +17,9 @@ export async function loader({ context }: Route.LoaderArgs) {
     trpc.gathering.listJoined.query(),
   ])
 
-  return { user, gatherings, joinedGatherings }
+  const friendActivity = await trpc.gathering.friendActivity.query({ page: 1, pageSize: 1 }).catch(() => ({ total: 0 }))
+
+  return { user, gatherings, joinedGatherings, friendActivityCount: friendActivity.total }
 }
 
 export async function action({ request, context }: Route.ActionArgs) {
@@ -38,7 +40,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 }
 
 export default function Dashboard({ loaderData }: Route.ComponentProps) {
-  const { gatherings, joinedGatherings } = loaderData
+  const { gatherings, joinedGatherings, friendActivityCount } = loaderData
   const navigation = useNavigation()
   const isPending = navigation.state !== 'idle'
 
@@ -175,6 +177,23 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
             ))}
           </div>
         )}
+      </div>
+
+      {/* Friend Activity Preview */}
+      <div className="animate-fade-in-up animation-delay-300 rounded-lg border border-border bg-card/60 p-5 backdrop-blur-sm">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-semibold tracking-[0.2em] text-primary uppercase">Social</p>
+            <p className="text-sm text-foreground mt-1">
+              {friendActivityCount > 0
+                ? `${friendActivityCount} gathering${friendActivityCount !== 1 ? 's' : ''} your friends are in`
+                : 'No friend activity yet'}
+            </p>
+          </div>
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/friends/activity">View Activity</Link>
+          </Button>
+        </div>
       </div>
     </div>
     </div>
