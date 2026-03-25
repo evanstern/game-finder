@@ -63,11 +63,9 @@ function formatSchedule(scheduleType: string, startsAt: Date): string {
 }
 
 function JoinForm({
-  gatheringId,
   visibility,
   joinCode,
 }: {
-  gatheringId: string
   visibility: string
   joinCode?: string
 }) {
@@ -201,7 +199,6 @@ export default function GatheringDetails({ loaderData }: Route.ComponentProps) {
           <div>
             {gathering.currentUserStatus === null ? (
               <JoinForm
-                gatheringId={gathering.id}
                 visibility={gathering.visibility}
                 joinCode={joinCode}
               />
