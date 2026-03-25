@@ -32,11 +32,15 @@ Unique constraint on `(requester_id, addressee_id)`.
 
 ### Bidirectional uniqueness
 
-The application layer checks for an existing row in either direction before inserting. If A->B exists (in any status), B->A is rejected with 409 Conflict. This prevents mirrored rows.
+The application layer checks for an existing row in either direction before inserting. If A->B exists with status `pending` or `accepted`, B->A is rejected with 409 Conflict. If A->B exists with status `declined`, the `sendRequest` logic allows the check to pass only if the *new* requester is different from the original requester (i.e., B can still send a request to A even though A's request to B was declined). See `sendRequest` logic for details.
+
+### Recovering from declined requests
+
+A declined friendship can be cleaned up via the `remove` procedure, which works on friendships in any status. Once the declined row is deleted, either user can send a fresh request. This provides a simple recovery path without special-casing the `sendRequest` logic.
 
 ### Shared gathering gate
 
-To send a friend request, both users must appear in the same gathering — either as the host (`gathering.host_id`) or as a participant (`gathering_participant.user_id`). This is validated at request time via a query joining `gathering` and `gathering_participant`.
+To send a friend request, both users must appear in the same gathering — either as the host (`gathering.host_id`) or as a participant (`gathering_participant.user_id`). The gathering can be in any status (active or closed). If a gathering has been deleted and its participants cascade-deleted, that shared connection no longer counts. This is validated at request time via a query joining `gathering` and `gathering_participant`.
 
 ## API: tRPC Procedures
 
@@ -48,9 +52,9 @@ All procedures require authentication.
 - **Input:** `{ userId: uuid }`
 - **Logic:**
   1. Cannot friend yourself -> 400
-  2. Check for existing row in either direction -> 409 if exists
+  2. Check for existing row in either direction with status `pending` or `accepted` -> 409 if exists
   3. Validate target user exists -> 404
-  4. Validate shared gathering exists (either user is host or participant in the same gathering) -> 403 if no shared gathering
+  4. Validate shared gathering exists (either user is host or participant in the same gathering, any gathering status) -> 403 if no shared gathering
   5. Create friendship row with status `pending`
 - **Returns:** friendship record
 
@@ -59,7 +63,7 @@ All procedures require authentication.
 - **Logic:**
   1. Validate friendship exists and is `pending`
   2. Validate current user is the addressee -> 403
-  3. Update status to `accepted`
+  3. Update status to `accepted`, update `updated_at`
 - **Returns:** friendship record
 
 #### `declineRequest`
@@ -67,13 +71,13 @@ All procedures require authentication.
 - **Logic:**
   1. Validate friendship exists and is `pending`
   2. Validate current user is the addressee -> 403
-  3. Update status to `declined`
+  3. Update status to `declined`, update `updated_at`
 - **Returns:** friendship record
 
 #### `remove`
 - **Input:** `{ friendshipId: uuid }`
 - **Logic:**
-  1. Validate friendship exists
+  1. Validate friendship exists (any status — works on accepted, pending, or declined)
   2. Validate current user is either requester or addressee -> 403
   3. Delete the row
 - **Returns:** `{ success: true }`
@@ -86,6 +90,11 @@ All procedures require authentication.
 - **Input:** `{}`
 - **Returns:** Array of friendship records where `addressee_id` is the current user and status is `pending`. Includes requester's `displayName`.
 
+#### `listOutgoingRequests`
+- **Input:** `{}`
+- **Returns:** Array of friendship records where `requester_id` is the current user and status is `pending`. Includes addressee's `displayName`.
+- **Note:** Needed so the gathering detail page UI can show "Pending" badges next to users the current user has already sent requests to.
+
 ### New procedure on `gathering` router
 
 #### `friendActivity`
@@ -93,10 +102,11 @@ All procedures require authentication.
 - **Input:** `{ page?: number, pageSize?: number }` (default page 1, pageSize 20, max 50)
 - **Logic:**
   1. Get current user's accepted friend IDs
-  2. Query public gatherings where a friend is the host OR a joined participant
-  3. Exclude gatherings the current user already participates in or hosts
-  4. Order by `next_occurrence_at` ascending (soonest first)
-  5. Paginate
+  2. Query gatherings where `visibility = 'public'` (per participant system's visibility model), `status = 'active'`, and `next_occurrence_at IS NOT NULL`
+  3. Filter to gatherings where a friend is the host OR a `joined` participant
+  4. Exclude gatherings the current user already participates in (any status: `joined` or `waitlisted`) or hosts
+  5. Order by `next_occurrence_at` ascending (soonest first)
+  6. Paginate
 - **Returns:** `{ gatherings: Array<gathering with friend names>, total, page, pageSize }`
 
 Each result includes a `friends` array indicating which friends are involved and their role (host or participant).
@@ -104,6 +114,8 @@ Each result includes a `friends` array indicating which friends are involved and
 ## Contracts (Zod Schemas)
 
 ### New schemas in `packages/contracts`
+
+Date fields use `z.coerce.date()` to match the existing codebase convention.
 
 ```typescript
 friendshipStatusSchema = z.enum(['pending', 'accepted', 'declined'])
@@ -121,19 +133,23 @@ friendshipSchema = z.object({
   requesterId: z.string().uuid(),
   addresseeId: z.string().uuid(),
   status: friendshipStatusSchema,
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
 })
 
 friendSchema = z.object({
   friendshipId: z.string().uuid(),
   friendId: z.string().uuid(),
   displayName: z.string(),
-  createdAt: z.string().datetime(),
+  createdAt: z.coerce.date(),
 })
 
 incomingRequestSchema = friendshipSchema.extend({
   requesterDisplayName: z.string(),
+})
+
+outgoingRequestSchema = friendshipSchema.extend({
+  addresseeDisplayName: z.string(),
 })
 
 friendActivityInputSchema = z.object({
@@ -164,11 +180,11 @@ friendActivityOutputSchema = z.object({
 - **Add Friend button**: Shown next to each participant (and the host) in the participant list. Not shown if:
   - It's the current user
   - Already friends
-  - Request already pending (show "Pending" badge instead)
+  - Request already pending in either direction (show "Pending" badge instead — uses `listOutgoingRequests` and `listIncomingRequests` data)
 
 ### Nav bar
 
-- **Friend request badge**: Small count indicator on a bell/people icon when there are pending incoming requests. Links to `/friends`.
+- **Friend request badge**: Small count indicator on a bell/people icon when there are pending incoming requests. Links to `/friends`. The count is fetched via `listIncomingRequests` in the root loader and counting the results. This is acceptable for a prototype; a dedicated count procedure can be added later if performance becomes a concern.
 
 ### New route: `/friends`
 
@@ -179,7 +195,7 @@ Two sections:
 
 ### New route: `/friends/activity`
 
-- **Friend Activity feed**: Public gatherings friends are hosting or playing in
+- **Friend Activity feed**: Public, active gatherings friends are hosting or playing in
 - Each card shows:
   - Gathering title
   - Which friend(s) are involved (with role badges: "hosting" / "playing")
@@ -197,10 +213,11 @@ Two sections:
 
 Single Kysely migration:
 
-1. Create `friendship_status` enum type (`pending`, `accepted`, `declined`)
+1. Create `friendship_status` enum type (`pending`, `accepted`, `declined`) via raw SQL
 2. Create `friendship` table with columns, FK constraints, unique constraint on `(requester_id, addressee_id)`
 3. Index on `addressee_id` (for incoming request queries)
 4. Index on `status` (for filtering accepted friendships)
+5. Index on `requester_id` (for outgoing request queries — not covered by the unique constraint alone since it's a composite)
 
 ## Out of scope
 

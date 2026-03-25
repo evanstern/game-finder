@@ -27,16 +27,24 @@ Inspired by roll-api's session participant system, but simplified for game-finde
 | `status` | enum: `joined`, `waitlisted` | |
 | `created_at` | timestamptz | used for waitlist ordering |
 
-Unique constraint on `(gathering_id, user_id)`.
+Unique constraint on `(gathering_id, user_id)`. Index on `user_id` (for "my joined gatherings" queries).
 
 ### New columns on `gathering`
 
 - `visibility` — enum: `public`, `private` (default: `public`)
 - `join_code` — varchar(8), nullable, unique index. Auto-generated when visibility is `private`.
 
+### `max_players` semantics
+
+`max_players` represents the number of joinable participant slots, **excluding the host**. The host is implicitly part of the gathering but has no row in `gathering_participant`. So if `max_players` is 4, up to 4 non-host users can join (5 total at the table including host). The UI should display this clearly (e.g., "4/4 players joined" with the host shown separately).
+
+### Concurrency
+
+The `join` procedure must acquire a row-level lock on the gathering row (`SELECT ... FOR UPDATE`) before counting participants. This serializes concurrent join attempts and prevents two users from both reading a count of (max_players - 1) and both getting `joined` status. The same lock applies to `leave` during auto-promote to prevent race conditions.
+
 ### Auto-promote logic
 
-When a participant with `joined` status leaves a gathering that has `max_players` set, the system auto-promotes the oldest `waitlisted` participant (by `created_at`) to `joined` status. This happens in the same transaction as the leave.
+When a participant with `joined` status leaves a gathering that has `max_players` set, the system auto-promotes the oldest `waitlisted` participant (by `created_at`) to `joined` status. This happens in the same transaction as the leave, under the same row-level lock.
 
 ## API: tRPC Procedures
 
@@ -49,25 +57,34 @@ When a participant with `joined` status leaves a gathering that has `max_players
   1. Validate gathering exists and is `active`
   2. Validate user is not already a participant
   3. Validate user is not the host (host is implicitly "in" the gathering)
-  4. If visibility is `private`, validate `joinCode` matches
-  5. If `max_players` is set and count of `joined` participants >= `max_players`, set status to `waitlisted`
-  6. Otherwise set status to `joined`
+  4. If visibility is `private`, validate `joinCode` matches. If visibility is `public`, ignore any provided `joinCode`.
+  5. Acquire row-level lock on the gathering row
+  6. If `max_players` is set and count of `joined` participants >= `max_players`, set status to `waitlisted`
+  7. Otherwise set status to `joined`
 - **Returns:** participant record with status
 
 #### `leave`
 - **Auth:** protected
 - **Input:** `{ gatheringId: uuid }`
 - **Logic:**
-  1. Validate user is a participant (not the host)
+  1. Validate user is a participant (not the host — host must close the gathering instead)
   2. Record whether leaver had `joined` status
   3. Delete the participant row
-  4. If leaver was `joined` and `max_players` is set, auto-promote oldest waitlisted participant
+  4. If leaver was `joined` and `max_players` is set, acquire row-level lock and auto-promote oldest waitlisted participant
 - **Returns:** `{ success: true }`
+- **Note:** Users can leave gatherings regardless of gathering status (active or closed). This allows cleanup of their dashboard.
 
 #### `listParticipants`
 - **Auth:** public
 - **Input:** `{ gatheringId: uuid }`
 - **Returns:** Array of `{ id, userId, displayName, status, createdAt }` ordered by `createdAt`
+- **Note:** Requires a JOIN to the `users` table to resolve `displayName`. Participant lists are public regardless of gathering visibility — knowing the gathering ID is sufficient.
+
+#### `listJoined`
+- **Auth:** protected
+- **Input:** `{}`
+- **Returns:** Array of gatherings the current user has joined or is waitlisted for, with their participation status. Includes gathering title, next occurrence, status, and participant status. Ordered by `next_occurrence_at` ascending. Only returns gatherings with `active` status.
+- **Note:** This powers the "My Games" dashboard section.
 
 ### Changes to existing procedures
 
@@ -81,11 +98,12 @@ When a participant with `joined` status leaves a gathering that has `max_players
 - If changed to `public`, clear the `join_code`
 
 #### `getById`
+- This is a `publicProcedure` that optionally uses auth context (`ctx.userId` may be `null`)
 - Response includes:
   - `visibility` field
   - `joinCode` — only returned when the current user is the host; `null` for everyone else
   - `participantCount` — count of `joined` participants (computed at query time)
-  - `currentUserStatus` — `joined`, `waitlisted`, or `null` if not a participant (computed at query time, requires auth context; `null` for unauthenticated users)
+  - `currentUserStatus` — `joined`, `waitlisted`, or `null` if not a participant (computed at query time; `null` for unauthenticated users since `ctx.userId` is `null`)
 
 #### `search`
 - Filters to `public` gatherings only. Private gatherings are not discoverable via search.
@@ -118,7 +136,11 @@ participantSchema = z.object({
   userId: z.string().uuid(),
   displayName: z.string(),
   status: participantStatusSchema,
-  createdAt: z.string().datetime(),
+  createdAt: z.coerce.date(),
+})
+
+joinedGatheringSchema = gatheringSchema.extend({
+  participantStatus: participantStatusSchema,
 })
 ```
 
@@ -132,7 +154,7 @@ participantSchema = z.object({
 
 ### Gathering detail page (`/gatherings/:id`)
 
-- **Participant count**: Display "4/6 players" (or "4 players" if no max) near the gathering info
+- **Participant count**: Display "4/6 players" (or "4 players" if no max) near the gathering info. Host is shown separately, not counted in this number.
 - **Participant list**: Section showing display names with status badges (`joined` / `waitlisted`)
 - **Join/Leave button** (contextual):
   - Not joined -> "Join Game" button (for private: prompts for join code if accessed without one in URL)
@@ -144,9 +166,10 @@ participantSchema = z.object({
 
 ### Dashboard (`/dashboard`)
 
-- New section: **"My Games"** — gatherings the user has joined (not hosted)
+- New section: **"My Games"** — gatherings the user has joined (not hosted), powered by the `listJoined` procedure
   - Shows gathering title, next occurrence, status badge (joined/waitlisted)
   - Links to gathering detail page
+  - Only shows active gatherings
 
 ### Gathering form (create/edit)
 
@@ -160,8 +183,8 @@ participantSchema = z.object({
 
 Single Kysely migration:
 
-1. Create `gathering_participant` table with columns, FK constraints, unique constraint, and index on `gathering_id`
-2. Create enum types `gathering_visibility` and `participant_status`
+1. Create enum types `gathering_visibility` and `participant_status` via raw SQL
+2. Create `gathering_participant` table with columns, FK constraints, unique constraint on `(gathering_id, user_id)`, index on `gathering_id`, and index on `user_id`
 3. Add `visibility` column to `gathering` (non-nullable, default `public`)
 4. Add `join_code` column to `gathering` (nullable, unique index)
 
