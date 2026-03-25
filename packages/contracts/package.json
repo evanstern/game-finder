@@ -8,7 +8,8 @@
     "./auth": "./src/auth.ts",
     "./gathering": "./src/gathering.ts",
     "./game": "./src/game.ts",
-    "./search": "./src/search.ts"
+    "./search": "./src/search.ts",
+    "./participant": "./src/participant.ts"
   },
   "scripts": {
     "lint": "biome check .",
