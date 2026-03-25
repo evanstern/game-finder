@@ -3,6 +3,7 @@ import {
   loginInputSchema,
   registerInputSchema,
 } from '@game-finder/contracts/auth'
+import { serializeUser } from '@game-finder/db/serializers'
 import {
   serializeClearSessionCookie,
   serializeSessionCookie,
@@ -43,14 +44,7 @@ export const authRouter = createRouter({
       const sessionId = await createSession(ctx.redis, user.id)
       ctx.resHeaders.append('set-cookie', serializeSessionCookie(sessionId))
 
-      return {
-        user: {
-          id: user.id,
-          email: user.email,
-          displayName: user.display_name,
-          createdAt: user.created_at,
-        },
-      }
+      return { user: serializeUser(user) }
     }),
 
   login: publicProcedure
@@ -80,14 +74,7 @@ export const authRouter = createRouter({
       const sessionId = await createSession(ctx.redis, user.id)
       ctx.resHeaders.append('set-cookie', serializeSessionCookie(sessionId))
 
-      return {
-        user: {
-          id: user.id,
-          email: user.email,
-          displayName: user.display_name,
-          createdAt: user.created_at,
-        },
-      }
+      return { user: serializeUser(user) }
     }),
 
   logout: protectedProcedure.mutation(async ({ ctx }) => {
@@ -107,11 +94,6 @@ export const authRouter = createRouter({
 
     if (!user) return null
 
-    return {
-      id: user.id,
-      email: user.email,
-      displayName: user.display_name,
-      createdAt: user.created_at,
-    }
+    return serializeUser(user)
   }),
 })

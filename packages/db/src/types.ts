@@ -34,6 +34,8 @@ export interface GatheringTable {
   max_players: number | null
   status: Generated<'active' | 'closed'>
   next_occurrence_at: Date | null
+  visibility: Generated<'public' | 'private'>
+  join_code: string | null
   created_at: Generated<Date>
   updated_at: Generated<Date>
 }
@@ -41,6 +43,23 @@ export interface GatheringTable {
 export interface GatheringGameTable {
   gathering_id: string
   game_id: string
+}
+
+export interface GatheringParticipantTable {
+  id: Generated<string>
+  gathering_id: string
+  user_id: string
+  status: 'joined' | 'waitlisted'
+  created_at: Generated<Date>
+}
+
+export interface FriendshipTable {
+  id: Generated<string>
+  requester_id: string
+  addressee_id: string
+  status: Generated<'pending' | 'accepted' | 'declined'>
+  created_at: Generated<Date>
+  updated_at: Generated<Date>
 }
 
 export interface ZipCodeLocationTable {
@@ -56,5 +75,7 @@ export interface Database {
   game: GameTable
   gathering: GatheringTable
   gathering_game: GatheringGameTable
+  gathering_participant: GatheringParticipantTable
   zip_code_location: ZipCodeLocationTable
+  friendship: FriendshipTable
 }

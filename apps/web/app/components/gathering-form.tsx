@@ -9,15 +9,18 @@ import {
 import { Input } from '@game-finder/ui/components/input'
 import { Label } from '@game-finder/ui/components/label'
 import {
+  RadioGroup,
+  RadioGroupItem,
+} from '@game-finder/ui/components/radio-group'
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@game-finder/ui/components/select'
-import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { useTRPC } from '../trpc/provider.js'
+import { Form } from 'react-router'
 import { MarkdownEditor } from './markdown-editor.js'
 
 interface GatheringFormData {
@@ -30,11 +33,12 @@ interface GatheringFormData {
   durationMinutes: string
   maxPlayers: string
   description: string
+  visibility: 'public' | 'private'
 }
 
 interface GatheringFormProps {
   initialData?: Partial<GatheringFormData>
-  onSubmit: (data: GatheringFormData) => void
+  games: Array<{ id: string; name: string }>
   isPending: boolean
   submitLabel: string
   errors?: Record<string, string>
@@ -49,23 +53,15 @@ const SCHEDULE_OPTIONS = [
 
 export function GatheringForm({
   initialData,
-  onSubmit,
+  games,
   isPending,
   submitLabel,
   errors = {},
 }: GatheringFormProps) {
-  const trpc = useTRPC()
-  const { data: games = [] } = useQuery(trpc.game.list.queryOptions({}))
-
-  const [title, setTitle] = useState(initialData?.title ?? '')
   const [gameIds, setGameIds] = useState<string[]>(initialData?.gameIds ?? [])
-  const [zipCode, setZipCode] = useState(initialData?.zipCode ?? '')
   const [scheduleType, setScheduleType] = useState(initialData?.scheduleType ?? 'once')
-  const [startsAt, setStartsAt] = useState(initialData?.startsAt ?? '')
-  const [endDate, setEndDate] = useState(initialData?.endDate ?? '')
-  const [durationMinutes, setDurationMinutes] = useState(initialData?.durationMinutes ?? '')
-  const [maxPlayers, setMaxPlayers] = useState(initialData?.maxPlayers ?? '')
   const [description, setDescription] = useState(initialData?.description ?? '')
+  const [visibility, setVisibility] = useState(initialData?.visibility ?? 'public')
 
   const toggleGame = (gameId: string) => {
     setGameIds((prev) =>
@@ -75,24 +71,9 @@ export function GatheringForm({
     )
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onSubmit({
-      title,
-      gameIds,
-      zipCode,
-      scheduleType,
-      startsAt,
-      endDate,
-      durationMinutes,
-      maxPlayers,
-      description,
-    })
-  }
-
   return (
     <Card className="animate-fade-in-up border-border bg-card/80 backdrop-blur-sm py-10">
-      <form onSubmit={handleSubmit}>
+      <Form method="post">
         <CardHeader className="text-center pb-2">
           <p className="mb-2 text-lg font-bold tracking-[0.25em] uppercase animate-fade-in animate-text-shimmer bg-gradient-to-r from-primary via-amber-200 to-primary bg-clip-text text-transparent">
             {submitLabel === 'Create Gathering' ? 'Summon your party' : 'Revise the scroll'}
@@ -111,7 +92,7 @@ export function GatheringForm({
           <div className="animate-fade-in-up animation-delay-100 grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="title" className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Title</Label>
-              <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Friday Board Game Night" required />
+              <Input id="title" name="title" defaultValue={initialData?.title ?? ''} placeholder="Friday Board Game Night" required />
               {errors.title && <p className="text-sm text-destructive">{errors.title}</p>}
             </div>
             <div className="space-y-1.5">
@@ -129,18 +110,22 @@ export function GatheringForm({
                     {game.name}
                   </Button>
                 ))}
+                {gameIds.map((id) => (
+                  <input key={id} type="hidden" name="gameIds" value={id} />
+                ))}
               </div>
               {errors.gameIds && <p className="text-sm text-destructive">{errors.gameIds}</p>}
             </div>
           </div>
 
-          <div className="animate-fade-in-up animation-delay-200 grid grid-cols-3 gap-4">
+          <div className="animate-fade-in-up animation-delay-200 grid grid-cols-4 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="zipCode" className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Zip Code</Label>
-              <Input id="zipCode" value={zipCode} onChange={(e) => setZipCode(e.target.value)} placeholder="90210" required />
+              <Input id="zipCode" name="zipCode" defaultValue={initialData?.zipCode ?? ''} placeholder="90210" required />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Schedule</Label>
+              <input type="hidden" name="scheduleType" value={scheduleType} />
               <Select value={scheduleType} onValueChange={(v) => setScheduleType(v as GatheringFormData['scheduleType'])}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
@@ -154,7 +139,21 @@ export function GatheringForm({
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="startsAt" className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Date & Time</Label>
-              <Input id="startsAt" type="datetime-local" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} required />
+              <Input id="startsAt" name="startsAt" type="datetime-local" defaultValue={initialData?.startsAt ?? ''} required />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Visibility</Label>
+              <input type="hidden" name="visibility" value={visibility} />
+              <RadioGroup value={visibility} onValueChange={(v) => setVisibility(v as 'public' | 'private')} className="flex gap-3 pt-1">
+                <div className="flex items-center space-x-1.5">
+                  <RadioGroupItem value="public" id="visibility-public" />
+                  <Label htmlFor="visibility-public" className="text-sm font-normal cursor-pointer">Public</Label>
+                </div>
+                <div className="flex items-center space-x-1.5">
+                  <RadioGroupItem value="private" id="visibility-private" />
+                  <Label htmlFor="visibility-private" className="text-sm font-normal cursor-pointer">Private</Label>
+                </div>
+              </RadioGroup>
             </div>
           </div>
 
@@ -162,21 +161,22 @@ export function GatheringForm({
             {scheduleType !== 'once' && (
               <div className="space-y-1.5">
                 <Label htmlFor="endDate" className="text-xs font-medium tracking-wide text-muted-foreground uppercase">End Date</Label>
-                <Input id="endDate" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                <Input id="endDate" name="endDate" type="date" defaultValue={initialData?.endDate ?? ''} />
               </div>
             )}
             <div className="space-y-1.5">
               <Label htmlFor="durationMinutes" className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Duration (min)</Label>
-              <Input id="durationMinutes" type="number" value={durationMinutes} onChange={(e) => setDurationMinutes(e.target.value)} placeholder="180" />
+              <Input id="durationMinutes" name="durationMinutes" type="number" defaultValue={initialData?.durationMinutes ?? ''} placeholder="180" />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="maxPlayers" className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Max Players</Label>
-              <Input id="maxPlayers" type="number" value={maxPlayers} onChange={(e) => setMaxPlayers(e.target.value)} placeholder="6" />
+              <Input id="maxPlayers" name="maxPlayers" type="number" defaultValue={initialData?.maxPlayers ?? ''} placeholder="6" />
             </div>
           </div>
 
           <div className="animate-fade-in-up animation-delay-300 space-y-1.5">
             <Label className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Description (Markdown)</Label>
+            <input type="hidden" name="description" value={description} />
             <MarkdownEditor value={description} onChange={setDescription} placeholder="Describe your gathering..." />
           </div>
         </CardContent>
@@ -185,7 +185,7 @@ export function GatheringForm({
             {isPending ? 'Saving...' : submitLabel}
           </Button>
         </CardFooter>
-      </form>
+      </Form>
     </Card>
   )
 }

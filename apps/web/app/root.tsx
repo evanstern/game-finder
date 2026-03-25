@@ -1,5 +1,4 @@
 import '@game-finder/ui/styles/globals.css'
-import { Suspense } from 'react'
 import {
   Links,
   Meta,
@@ -9,11 +8,20 @@ import {
 } from 'react-router'
 import type { Route } from './+types/root.js'
 import { Nav } from './components/nav.js'
-import { TRPCReactProvider } from './trpc/provider.js'
+import { createServerTRPC } from './trpc/server.js'
 
-export function loader({ context }: Route.LoaderArgs) {
+export async function loader({ context }: Route.LoaderArgs) {
   const ctx = context as { cookie?: string }
-  return { cookie: ctx?.cookie ?? '' }
+  const trpc = createServerTRPC(ctx.cookie ?? '')
+  const user = await trpc.auth.me.query().catch(() => null)
+
+  let friendRequestCount = 0
+  if (user) {
+    const requests = await trpc.friendship.listIncomingRequests.query().catch(() => [])
+    friendRequestCount = requests.length
+  }
+
+  return { user, friendRequestCount }
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -41,11 +49,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 export default function Root({ loaderData }: Route.ComponentProps) {
   return (
-    <TRPCReactProvider ssrCookie={loaderData.cookie}>
-      <Nav />
-      <Suspense fallback={<div>Loading...</div>}>
-        <Outlet />
-      </Suspense>
-    </TRPCReactProvider>
+    <>
+      <Nav user={loaderData.user} friendRequestCount={loaderData.friendRequestCount} />
+      <Outlet />
+    </>
   )
 }

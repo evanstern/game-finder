@@ -2,11 +2,9 @@ import { Badge } from '@game-finder/ui/components/badge'
 import { Button } from '@game-finder/ui/components/button'
 import { Input } from '@game-finder/ui/components/input'
 import { Logo } from '@game-finder/ui/components/logo'
-import { useQuery } from '@tanstack/react-query'
 import { Fragment, useState } from 'react'
-import { useNavigate } from 'react-router'
+import { useNavigate, useRouteLoaderData } from 'react-router'
 import { MapBackground } from '../components/map-background.js'
-import { useTRPC } from '../trpc/provider.js'
 
 const POPULAR_TAGS = [
   { label: 'D&D 5e', emoji: '⚔' },
@@ -91,10 +89,8 @@ function SearchCard() {
 }
 
 export default function Home() {
-  const trpc = useTRPC()
-  const { data: user, isLoading } = useQuery(trpc.auth.me.queryOptions())
-
-  if (isLoading) return null
+  const rootData = useRouteLoaderData('root') as { user: { displayName: string } | null }
+  const user = rootData?.user
 
   return (
     <div className="relative min-h-[calc(100vh-65px)]">

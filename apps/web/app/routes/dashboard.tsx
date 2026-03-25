@@ -1,42 +1,48 @@
 import { Badge } from '@game-finder/ui/components/badge'
 import { Button } from '@game-finder/ui/components/button'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Form, Link, redirect, useNavigation } from 'react-router'
 import { MapBackground } from '../components/map-background.js'
-import { useTRPC } from '../trpc/provider.js'
+import { createServerTRPC } from '../trpc/server.js'
+import type { Route } from './+types/dashboard.js'
 
-export default function Dashboard() {
-  const navigate = useNavigate()
-  const trpc = useTRPC()
-  const queryClient = useQueryClient()
+export async function loader({ context }: Route.LoaderArgs) {
+  const ctx = context as { cookie?: string }
+  const trpc = createServerTRPC(ctx.cookie ?? '')
 
-  const { data: currentUser, isLoading: authLoading } = useQuery(trpc.auth.me.queryOptions())
-  const { data: gatherings = [], isLoading: gatheringsLoading } = useQuery(
-    trpc.gathering.listByHost.queryOptions(),
-  )
+  const user = await trpc.auth.me.query().catch(() => null)
+  if (!user) throw redirect('/login?returnTo=/dashboard')
 
-  useEffect(() => {
-    if (!authLoading && !currentUser) navigate('/login')
-  }, [currentUser, authLoading, navigate])
+  const [gatherings, joinedGatherings] = await Promise.all([
+    trpc.gathering.listByHost.query(),
+    trpc.gathering.listJoined.query(),
+  ])
 
-  const closeMutation = useMutation(
-    trpc.gathering.close.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries(trpc.gathering.listByHost.queryOptions())
-      },
-    }),
-  )
+  const friendActivity = await trpc.gathering.friendActivity.query({ page: 1, pageSize: 1 }).catch(() => ({ total: 0 }))
 
-  const deleteMutation = useMutation(
-    trpc.gathering.delete.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries(trpc.gathering.listByHost.queryOptions())
-      },
-    }),
-  )
+  return { user, gatherings, joinedGatherings, friendActivityCount: friendActivity.total }
+}
 
-  if (authLoading || !currentUser) return null
+export async function action({ request, context }: Route.ActionArgs) {
+  const ctx = context as { cookie?: string }
+  const trpc = createServerTRPC(ctx.cookie ?? '')
+
+  const formData = await request.formData()
+  const intent = String(formData.get('intent'))
+  const gatheringId = String(formData.get('gatheringId'))
+
+  if (intent === 'close') {
+    await trpc.gathering.close.mutate({ id: gatheringId })
+  } else if (intent === 'delete') {
+    await trpc.gathering.delete.mutate({ id: gatheringId })
+  }
+
+  return redirect('/dashboard')
+}
+
+export default function Dashboard({ loaderData }: Route.ComponentProps) {
+  const { gatherings, joinedGatherings, friendActivityCount } = loaderData
+  const navigation = useNavigation()
+  const isPending = navigation.state !== 'idle'
 
   return (
     <div className="relative min-h-[calc(100vh-65px)]">
@@ -57,13 +63,7 @@ export default function Dashboard() {
         </Button>
       </div>
 
-      {gatheringsLoading ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-16 animate-pulse rounded-lg bg-muted" />
-          ))}
-        </div>
-      ) : gatherings.length === 0 ? (
+      {gatherings.length === 0 ? (
         <div className="animate-fade-in-up animation-delay-100 rounded-lg border border-border bg-card/60 p-10 text-center backdrop-blur-sm">
           <p className="text-sm text-muted-foreground">You have no gatherings yet.</p>
           <Button className="mt-4" asChild>
@@ -101,27 +101,23 @@ export default function Dashboard() {
                     <Link to={`/gatherings/${gathering.id}/edit`}>Edit</Link>
                   </Button>
                   {gathering.status === 'active' ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={closeMutation.isPending}
-                      onClick={() => closeMutation.mutate({ id: gathering.id })}
-                    >
-                      Close
-                    </Button>
+                    <Form method="post">
+                      <input type="hidden" name="intent" value="close" />
+                      <input type="hidden" name="gatheringId" value={gathering.id} />
+                      <Button type="submit" variant="outline" size="sm" disabled={isPending}>
+                        Close
+                      </Button>
+                    </Form>
                   ) : (
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      disabled={deleteMutation.isPending}
-                      onClick={() => {
-                        if (confirm(`Delete "${gathering.title}"? This cannot be undone.`)) {
-                          deleteMutation.mutate({ id: gathering.id })
-                        }
-                      }}
-                    >
-                      Delete
-                    </Button>
+                    <Form method="post" onSubmit={(e) => {
+                      if (!confirm(`Delete "${gathering.title}"? This cannot be undone.`)) {
+                        e.preventDefault()
+                      }
+                    }}>
+                      <input type="hidden" name="intent" value="delete" />
+                      <input type="hidden" name="gatheringId" value={gathering.id} />
+                      <Button type="submit" variant="destructive" size="sm" disabled={isPending}>Delete</Button>
+                    </Form>
                   )}
                 </div>
               </div>
@@ -129,6 +125,76 @@ export default function Dashboard() {
           ))}
         </div>
       )}
+      {/* My Games Section */}
+      <div className="animate-fade-in-up animation-delay-200 space-y-4 mt-10">
+        <div className="space-y-1">
+          <p className="text-[11px] font-semibold tracking-[0.2em] text-primary uppercase">
+            Adventure log
+          </p>
+          <h2 className="text-xl font-bold tracking-tight text-foreground">
+            Games You&apos;ve Joined
+          </h2>
+        </div>
+
+        {joinedGatherings.length === 0 ? (
+          <div className="rounded-lg border border-border bg-card/60 p-10 text-center backdrop-blur-sm">
+            <p className="text-sm text-muted-foreground">You haven&apos;t joined any gatherings yet.</p>
+            <Button className="mt-4" asChild>
+              <Link to="/search">Find games to join</Link>
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {joinedGatherings.map((gathering) => (
+              <div
+                key={gathering.id}
+                className="rounded-lg border border-border bg-card/60 p-5 backdrop-blur-sm transition-all duration-200 hover:border-primary/20"
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <Link
+                      to={`/gatherings/${gathering.id}`}
+                      className="text-base font-semibold tracking-tight text-foreground transition-colors hover:text-primary"
+                    >
+                      {gathering.title}
+                    </Link>
+                    <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+                      <span>
+                        {gathering.nextOccurrenceAt
+                          ? new Date(gathering.nextOccurrenceAt).toLocaleDateString([], { dateStyle: 'medium' })
+                          : 'No upcoming session'}
+                      </span>
+                      <Badge
+                        variant={gathering.participantStatus === 'joined' ? 'default' : 'secondary'}
+                        className="text-[10px]"
+                      >
+                        {gathering.participantStatus === 'joined' ? 'Joined' : 'Waitlisted'}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Friend Activity Preview */}
+      <div className="animate-fade-in-up animation-delay-300 rounded-lg border border-border bg-card/60 p-5 backdrop-blur-sm">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-semibold tracking-[0.2em] text-primary uppercase">Social</p>
+            <p className="text-sm text-foreground mt-1">
+              {friendActivityCount > 0
+                ? `${friendActivityCount} gathering${friendActivityCount !== 1 ? 's' : ''} your friends are in`
+                : 'No friend activity yet'}
+            </p>
+          </div>
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/friends/activity">View Activity</Link>
+          </Button>
+        </div>
+      </div>
     </div>
     </div>
   )

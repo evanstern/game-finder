@@ -4,47 +4,20 @@ import {
   createGatheringSchema,
   updateGatheringSchema,
 } from '@game-finder/contracts/gathering'
+import {
+  joinGatheringSchema,
+  leaveGatheringSchema,
+  listParticipantsSchema,
+} from '@game-finder/contracts/participant'
+import { friendActivityInputSchema } from '@game-finder/contracts/friendship'
 import { searchGatheringsSchema } from '@game-finder/contracts/search'
 import { sql } from '@game-finder/db'
+import { serializeGame, serializeGathering, serializeParticipant } from '@game-finder/db/serializers'
 import { computeNextOccurrence } from '../gathering/next-occurrence.js'
+import { generateJoinCode } from '../gathering/join-code.js'
 import { stripMarkdownPreview } from '../gathering/strip-markdown.js'
 import type { Context } from './context.js'
 import { createRouter, protectedProcedure, publicProcedure } from './init.js'
-interface GatheringRow {
-  id: string
-  host_id: string
-  title: string
-  description: string
-  zip_code: string
-  schedule_type: 'once' | 'weekly' | 'biweekly' | 'monthly'
-  starts_at: Date
-  end_date: Date | null
-  duration_minutes: number | null
-  max_players: number | null
-  status: 'active' | 'closed'
-  next_occurrence_at: Date | null
-  created_at: Date
-  updated_at: Date
-}
-
-function serializeGathering(row: GatheringRow) {
-  return {
-    id: row.id,
-    hostId: row.host_id,
-    title: row.title,
-    description: row.description,
-    zipCode: row.zip_code,
-    scheduleType: row.schedule_type,
-    startsAt: row.starts_at,
-    endDate: row.end_date,
-    durationMinutes: row.duration_minutes,
-    maxPlayers: row.max_players,
-    status: row.status,
-    nextOccurrenceAt: row.next_occurrence_at,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  }
-}
 
 async function fetchGamesForGathering(ctx: { db: Context['db'] }, gatheringId: string) {
   const rows = await ctx.db
@@ -54,17 +27,29 @@ async function fetchGamesForGathering(ctx: { db: Context['db'] }, gatheringId: s
     .where('gathering_game.gathering_id', '=', gatheringId)
     .execute()
 
-  return rows.map((g: { id: string; name: string; type: string; description: string; min_players: number; max_players: number; image_url: string | null; created_at: Date; updated_at: Date }) => ({
-    id: g.id,
-    name: g.name,
-    type: g.type,
-    description: g.description,
-    minPlayers: g.min_players,
-    maxPlayers: g.max_players,
-    imageUrl: g.image_url,
-    createdAt: g.created_at,
-    updatedAt: g.updated_at,
-  }))
+  return rows.map(serializeGame)
+}
+
+async function ensureGatheringOwner(
+  db: Context['db'],
+  gatheringId: string,
+  userId: string,
+) {
+  const existing = await db
+    .selectFrom('gathering')
+    .select(['id', 'host_id'])
+    .where('id', '=', gatheringId)
+    .executeTakeFirst()
+
+  if (!existing) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Gathering not found' })
+  }
+
+  if (existing.host_id !== userId) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Not the owner' })
+  }
+
+  return existing
 }
 
 export const gatheringRouter = createRouter({
@@ -103,6 +88,8 @@ export const gatheringRouter = createRouter({
           duration_minutes: input.durationMinutes ?? null,
           max_players: input.maxPlayers ?? null,
           next_occurrence_at: nextOccurrenceAt,
+          visibility: input.visibility ?? 'public',
+          join_code: (input.visibility ?? 'public') === 'private' ? generateJoinCode() : null,
         })
         .returningAll()
         .executeTakeFirstOrThrow()
@@ -142,29 +129,39 @@ export const gatheringRouter = createRouter({
 
       const { id, gameIds, ...fields } = input
 
-      const updateValues: Record<string, unknown> = {}
-      if (fields.title !== undefined) updateValues.title = fields.title
-      if (fields.description !== undefined) updateValues.description = fields.description
-      if (fields.zipCode !== undefined) updateValues.zip_code = fields.zipCode
-      if (fields.scheduleType !== undefined) updateValues.schedule_type = fields.scheduleType
-      if (fields.startsAt !== undefined) updateValues.starts_at = new Date(fields.startsAt)
-      if (fields.endDate !== undefined) updateValues.end_date = fields.endDate ? new Date(fields.endDate) : null
-      if (fields.durationMinutes !== undefined) updateValues.duration_minutes = fields.durationMinutes
-      if (fields.maxPlayers !== undefined) updateValues.max_players = fields.maxPlayers
-
       const scheduleType = fields.scheduleType ?? existing.schedule_type
       const startsAt = fields.startsAt ? new Date(fields.startsAt) : existing.starts_at
       const endDate = fields.endDate !== undefined
         ? (fields.endDate ? new Date(fields.endDate) : null)
         : existing.end_date
-
       const nextOccurrenceAt = computeNextOccurrence(scheduleType, startsAt, endDate)
-      updateValues.next_occurrence_at = nextOccurrenceAt
-      updateValues.updated_at = new Date()
 
-      const updated = await ctx.db
+      let query = ctx.db
         .updateTable('gathering')
-        .set(updateValues)
+        .set({
+          next_occurrence_at: nextOccurrenceAt,
+          updated_at: new Date(),
+        })
+
+      if (fields.title !== undefined) query = query.set({ title: fields.title })
+      if (fields.description !== undefined) query = query.set({ description: fields.description })
+      if (fields.zipCode !== undefined) query = query.set({ zip_code: fields.zipCode })
+      if (fields.scheduleType !== undefined) query = query.set({ schedule_type: fields.scheduleType })
+      if (fields.startsAt !== undefined) query = query.set({ starts_at: new Date(fields.startsAt) })
+      if (fields.endDate !== undefined) query = query.set({ end_date: fields.endDate ? new Date(fields.endDate) : null })
+      if (fields.durationMinutes !== undefined) query = query.set({ duration_minutes: fields.durationMinutes })
+      if (fields.maxPlayers !== undefined) query = query.set({ max_players: fields.maxPlayers })
+
+      if (fields.visibility !== undefined) {
+        query = query.set({ visibility: fields.visibility })
+        if (fields.visibility === 'private' && !existing.join_code) {
+          query = query.set({ join_code: generateJoinCode() })
+        } else if (fields.visibility === 'public') {
+          query = query.set({ join_code: null })
+        }
+      }
+
+      const updated = await query
         .where('id', '=', id)
         .returningAll()
         .executeTakeFirstOrThrow()
@@ -195,19 +192,7 @@ export const gatheringRouter = createRouter({
   delete: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ input, ctx }) => {
-      const existing = await ctx.db
-        .selectFrom('gathering')
-        .select(['id', 'host_id'])
-        .where('id', '=', input.id)
-        .executeTakeFirst()
-
-      if (!existing) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Gathering not found' })
-      }
-
-      if (existing.host_id !== ctx.userId) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Not the owner' })
-      }
+      await ensureGatheringOwner(ctx.db, input.id, ctx.userId)
 
       await ctx.db
         .deleteFrom('gathering')
@@ -220,19 +205,7 @@ export const gatheringRouter = createRouter({
   close: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ input, ctx }) => {
-      const existing = await ctx.db
-        .selectFrom('gathering')
-        .selectAll()
-        .where('id', '=', input.id)
-        .executeTakeFirst()
-
-      if (!existing) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Gathering not found' })
-      }
-
-      if (existing.host_id !== ctx.userId) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Not the owner' })
-      }
+      await ensureGatheringOwner(ctx.db, input.id, ctx.userId)
 
       const updated = await ctx.db
         .updateTable('gathering')
@@ -250,23 +223,8 @@ export const gatheringRouter = createRouter({
       const row = await ctx.db
         .selectFrom('gathering')
         .innerJoin('users', 'users.id', 'gathering.host_id')
-        .select([
-          'gathering.id',
-          'gathering.host_id',
-          'gathering.title',
-          'gathering.description',
-          'gathering.zip_code',
-          'gathering.schedule_type',
-          'gathering.starts_at',
-          'gathering.end_date',
-          'gathering.duration_minutes',
-          'gathering.max_players',
-          'gathering.status',
-          'gathering.next_occurrence_at',
-          'gathering.created_at',
-          'gathering.updated_at',
-          'users.display_name as host_display_name',
-        ])
+        .selectAll('gathering')
+        .select('users.display_name as host_display_name')
         .where('gathering.id', '=', input.id)
         .executeTakeFirst()
 
@@ -276,12 +234,32 @@ export const gatheringRouter = createRouter({
 
       const games = await fetchGamesForGathering(ctx, row.id)
 
+      const countResult = await ctx.db
+        .selectFrom('gathering_participant')
+        .select(sql<number>`count(*)`.as('count'))
+        .where('gathering_id', '=', row.id)
+        .where('status', '=', 'joined')
+        .executeTakeFirstOrThrow()
+
+      let currentUserStatus: 'joined' | 'waitlisted' | null = null
+      if (ctx.userId) {
+        const participant = await ctx.db
+          .selectFrom('gathering_participant')
+          .select('status')
+          .where('gathering_id', '=', row.id)
+          .where('user_id', '=', ctx.userId)
+          .executeTakeFirst()
+        currentUserStatus = participant?.status ?? null
+      }
+
       return {
-        ...serializeGathering(row as unknown as GatheringRow),
-        host: {
-          displayName: (row as Record<string, unknown>).host_display_name as string,
-        },
+        ...serializeGathering(row),
+        host: { displayName: row.host_display_name },
         games,
+        participantCount: Number(countResult.count),
+        currentUserStatus,
+        // Only expose joinCode to the host
+        joinCode: ctx.userId === row.host_id ? row.join_code : null,
       }
     }),
 
@@ -294,7 +272,303 @@ export const gatheringRouter = createRouter({
         .orderBy('created_at', 'desc')
         .execute()
 
-      return rows.map((row) => serializeGathering(row))
+      return rows.map(serializeGathering)
+    }),
+
+  join: protectedProcedure
+    .input(joinGatheringSchema)
+    .mutation(async ({ input, ctx }) => {
+      // Row-level lock to prevent race conditions on max_players check
+      const gathering = await ctx.db
+        .selectFrom('gathering')
+        .selectAll()
+        .where('id', '=', input.gatheringId)
+        .forUpdate()
+        .executeTakeFirst()
+
+      if (!gathering) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Gathering not found' })
+      }
+
+      if (gathering.status !== 'active') {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Gathering is not active' })
+      }
+
+      if (gathering.host_id === ctx.userId) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Host cannot join their own gathering' })
+      }
+
+      if (gathering.visibility === 'private') {
+        if (!input.joinCode || input.joinCode !== gathering.join_code) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Invalid join code' })
+        }
+      }
+
+      const existing = await ctx.db
+        .selectFrom('gathering_participant')
+        .select('id')
+        .where('gathering_id', '=', input.gatheringId)
+        .where('user_id', '=', ctx.userId)
+        .executeTakeFirst()
+
+      if (existing) {
+        throw new TRPCError({ code: 'CONFLICT', message: 'Already a participant' })
+      }
+
+      let status: 'joined' | 'waitlisted' = 'joined'
+      if (gathering.max_players !== null) {
+        const countResult = await ctx.db
+          .selectFrom('gathering_participant')
+          .select(sql<number>`count(*)`.as('count'))
+          .where('gathering_id', '=', input.gatheringId)
+          .where('status', '=', 'joined')
+          .executeTakeFirstOrThrow()
+
+        if (Number(countResult.count) >= gathering.max_players) {
+          status = 'waitlisted'
+        }
+      }
+
+      const participant = await ctx.db
+        .insertInto('gathering_participant')
+        .values({
+          gathering_id: input.gatheringId,
+          user_id: ctx.userId,
+          status,
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow()
+
+      const user = await ctx.db
+        .selectFrom('users')
+        .select('display_name')
+        .where('id', '=', ctx.userId)
+        .executeTakeFirstOrThrow()
+
+      return serializeParticipant({ ...participant, display_name: user.display_name })
+    }),
+
+  leave: protectedProcedure
+    .input(leaveGatheringSchema)
+    .mutation(async ({ input, ctx }) => {
+      const gathering = await ctx.db
+        .selectFrom('gathering')
+        .select(['id', 'host_id', 'max_players'])
+        .where('id', '=', input.gatheringId)
+        .forUpdate()
+        .executeTakeFirst()
+
+      if (!gathering) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Gathering not found' })
+      }
+
+      if (gathering.host_id === ctx.userId) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Host cannot leave — close the gathering instead' })
+      }
+
+      const participant = await ctx.db
+        .selectFrom('gathering_participant')
+        .select(['id', 'status'])
+        .where('gathering_id', '=', input.gatheringId)
+        .where('user_id', '=', ctx.userId)
+        .executeTakeFirst()
+
+      if (!participant) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Not a participant' })
+      }
+
+      await ctx.db
+        .deleteFrom('gathering_participant')
+        .where('id', '=', participant.id)
+        .execute()
+
+      // Auto-promote oldest waitlisted participant if a joined member left
+      if (participant.status === 'joined' && gathering.max_players !== null) {
+        const nextWaitlisted = await ctx.db
+          .selectFrom('gathering_participant')
+          .select('id')
+          .where('gathering_id', '=', input.gatheringId)
+          .where('status', '=', 'waitlisted')
+          .orderBy('created_at', 'asc')
+          .limit(1)
+          .executeTakeFirst()
+
+        if (nextWaitlisted) {
+          await ctx.db
+            .updateTable('gathering_participant')
+            .set({ status: 'joined' })
+            .where('id', '=', nextWaitlisted.id)
+            .execute()
+        }
+      }
+
+      return { success: true }
+    }),
+
+  listParticipants: publicProcedure
+    .input(listParticipantsSchema)
+    .query(async ({ input, ctx }) => {
+      const rows = await ctx.db
+        .selectFrom('gathering_participant')
+        .innerJoin('users', 'users.id', 'gathering_participant.user_id')
+        .selectAll('gathering_participant')
+        .select('users.display_name')
+        .where('gathering_participant.gathering_id', '=', input.gatheringId)
+        .orderBy('gathering_participant.created_at', 'asc')
+        .execute()
+
+      return rows.map(serializeParticipant)
+    }),
+
+  listJoined: protectedProcedure
+    .query(async ({ ctx }) => {
+      const rows = await ctx.db
+        .selectFrom('gathering_participant')
+        .innerJoin('gathering', 'gathering.id', 'gathering_participant.gathering_id')
+        .selectAll('gathering')
+        .select('gathering_participant.status as participant_status')
+        .where('gathering_participant.user_id', '=', ctx.userId)
+        .where('gathering.status', '=', 'active')
+        .orderBy('gathering.next_occurrence_at', 'asc')
+        .execute()
+
+      return rows.map((row) => ({
+        ...serializeGathering(row),
+        participantStatus: row.participant_status,
+      }))
+    }),
+
+  friendActivity: protectedProcedure
+    .input(friendActivityInputSchema)
+    .query(async ({ input, ctx }) => {
+      const { page, pageSize } = input
+
+      // Get accepted friend IDs
+      const friendRows = await ctx.db
+        .selectFrom('friendship')
+        .select(['requester_id', 'addressee_id'])
+        .where('status', '=', 'accepted')
+        .where((eb) =>
+          eb.or([
+            eb('requester_id', '=', ctx.userId),
+            eb('addressee_id', '=', ctx.userId),
+          ]),
+        )
+        .execute()
+
+      const friendIds = friendRows.map((r) =>
+        r.requester_id === ctx.userId ? r.addressee_id : r.requester_id,
+      )
+
+      if (friendIds.length === 0) {
+        return { gatherings: [], total: 0, page, pageSize }
+      }
+
+      // Base query: public, active gatherings with next_occurrence_at
+      // where a friend is host OR a joined participant
+      // excluding gatherings the current user is involved in
+      let baseQuery = ctx.db
+        .selectFrom('gathering')
+        .where('gathering.visibility', '=', 'public')
+        .where('gathering.status', '=', 'active')
+        .where('gathering.next_occurrence_at', 'is not', null)
+        .where('gathering.host_id', '!=', ctx.userId)
+        .where((eb) =>
+          eb.not(
+            eb.exists(
+              eb.selectFrom('gathering_participant')
+                .select(sql.lit(1).as('one'))
+                .where('user_id', '=', ctx.userId)
+                .whereRef('gathering_id', '=', 'gathering.id'),
+            ),
+          ),
+        )
+        .where((eb) =>
+          eb.or([
+            eb('gathering.host_id', 'in', friendIds),
+            eb.exists(
+              eb.selectFrom('gathering_participant')
+                .select(sql.lit(1).as('one'))
+                .where('user_id', 'in', friendIds)
+                .where('status', '=', 'joined')
+                .whereRef('gathering_id', '=', 'gathering.id'),
+            ),
+          ]),
+        )
+
+      // Count total
+      const countResult = await baseQuery
+        .select(sql<number>`count(*)`.as('count'))
+        .executeTakeFirstOrThrow()
+      const total = Number(countResult.count)
+
+      // Fetch paginated results
+      const rows = await baseQuery
+        .selectAll('gathering')
+        .orderBy('gathering.next_occurrence_at', 'asc')
+        .limit(pageSize)
+        .offset((page - 1) * pageSize)
+        .execute()
+
+      // For each gathering, determine which friends are involved and their role
+      const gatheringIds = rows.map((r) => r.id)
+      const friendsMap = new Map<string, Array<{ friendId: string; displayName: string; role: 'host' | 'participant' }>>()
+
+      if (gatheringIds.length > 0) {
+        // Friends who are hosts
+        const hostFriendIds = rows
+          .filter((r) => friendIds.includes(r.host_id))
+          .map((r) => r.host_id)
+
+        if (hostFriendIds.length > 0) {
+          const hostUsers = await ctx.db
+            .selectFrom('users')
+            .select(['id', 'display_name'])
+            .where('id', 'in', hostFriendIds)
+            .execute()
+
+          const hostNameMap = new Map(hostUsers.map((u) => [u.id, u.display_name]))
+
+          for (const row of rows) {
+            if (friendIds.includes(row.host_id)) {
+              const existing = friendsMap.get(row.id) ?? []
+              existing.push({
+                friendId: row.host_id,
+                displayName: hostNameMap.get(row.host_id) ?? 'Unknown',
+                role: 'host',
+              })
+              friendsMap.set(row.id, existing)
+            }
+          }
+        }
+
+        // Friends who are participants
+        const participantRows = await ctx.db
+          .selectFrom('gathering_participant')
+          .innerJoin('users', 'users.id', 'gathering_participant.user_id')
+          .select([
+            'gathering_participant.gathering_id',
+            'gathering_participant.user_id',
+            'users.display_name',
+          ])
+          .where('gathering_participant.gathering_id', 'in', gatheringIds)
+          .where('gathering_participant.user_id', 'in', friendIds)
+          .where('gathering_participant.status', '=', 'joined')
+          .execute()
+
+        for (const row of participantRows) {
+          const existing = friendsMap.get(row.gathering_id) ?? []
+          existing.push({ friendId: row.user_id, displayName: row.display_name, role: 'participant' })
+          friendsMap.set(row.gathering_id, existing)
+        }
+      }
+
+      const gatherings = rows.map((row) => ({
+        ...serializeGathering(row),
+        friends: friendsMap.get(row.id) ?? [],
+      }))
+
+      return { gatherings, total, page, pageSize }
     }),
 
   search: publicProcedure
@@ -302,7 +576,6 @@ export const gatheringRouter = createRouter({
     .query(async ({ input, ctx }) => {
       const { zipCode, radius, query, gameTypes, sortBy, page, pageSize } = input
 
-      // 1. Look up the searcher's ZIP
       const searchZip = await ctx.db
         .selectFrom('zip_code_location')
         .selectAll()
@@ -316,7 +589,6 @@ export const gatheringRouter = createRouter({
       const lat = Number(searchZip.latitude)
       const lng = Number(searchZip.longitude)
 
-      // Haversine distance SQL expression
       const distanceExpr = sql<number>`(
         3959 * acos(
           cos(radians(${lat})) * cos(radians(cast(${sql.ref('z.latitude')} as double precision))) *
@@ -325,15 +597,14 @@ export const gatheringRouter = createRouter({
         )
       )`
 
-      // 2. Build the base query
       let baseQuery = ctx.db
         .selectFrom('gathering')
         .innerJoin('zip_code_location as z', 'z.zip_code', 'gathering.zip_code')
         .innerJoin('users', 'users.id', 'gathering.host_id')
         .where('gathering.status', '=', 'active')
+        .where('gathering.visibility', '=', 'public')
         .where('gathering.next_occurrence_at', 'is not', null)
 
-      // 3. Keyword filter: match title or linked game name
       if (query) {
         const pattern = `%${query}%`
         baseQuery = baseQuery.where((eb) =>
@@ -351,7 +622,6 @@ export const gatheringRouter = createRouter({
         )
       }
 
-      // 4. Game type filter
       if (gameTypes && gameTypes.length > 0) {
         baseQuery = baseQuery.where((eb) =>
           eb.exists(
@@ -365,16 +635,13 @@ export const gatheringRouter = createRouter({
         )
       }
 
-      // 5. Radius filter
       baseQuery = baseQuery.where(distanceExpr, '<=', radius)
 
-      // 6. Count total
       const countResult = await baseQuery
         .select(sql<number>`count(*)`.as('count'))
         .executeTakeFirstOrThrow()
       const total = Number(countResult.count)
 
-      // 7. Fetch paginated results
       let resultsQuery = baseQuery
         .select([
           'gathering.id',
@@ -402,7 +669,6 @@ export const gatheringRouter = createRouter({
 
       const rows = await resultsQuery.execute()
 
-      // 8. Fetch games for each gathering
       const gatheringIds = rows.map((r) => r.id)
       const gamesMap: Map<string, Array<{ id: string; name: string; type: string }>> = new Map()
 
@@ -426,7 +692,6 @@ export const gatheringRouter = createRouter({
         }
       }
 
-      // 9. Serialize results
       const gatherings = rows.map((row) => ({
         id: row.id,
         title: row.title,
@@ -438,9 +703,9 @@ export const gatheringRouter = createRouter({
         nextOccurrenceAt: row.next_occurrence_at,
         maxPlayers: row.max_players,
         status: row.status,
-        hostDisplayName: (row as Record<string, unknown>).host_display_name as string,
+        hostDisplayName: row.host_display_name,
         games: gamesMap.get(row.id) ?? [],
-        locationLabel: `${(row as Record<string, unknown>).location_city}, ${(row as Record<string, unknown>).location_state}`,
+        locationLabel: `${row.location_city}, ${row.location_state}`,
       }))
 
       return {
