@@ -34,6 +34,7 @@ export async function action({ request, context }: Route.ActionArgs) {
       durationMinutes: formData.get('durationMinutes') ? parseInt(String(formData.get('durationMinutes')), 10) : null,
       maxPlayers: formData.get('maxPlayers') ? parseInt(String(formData.get('maxPlayers')), 10) : null,
       description: String(formData.get('description') ?? ''),
+      visibility: String(formData.get('visibility') ?? 'public'),
     })
     return redirect(`/gatherings/${result.id}`)
   } catch (error) {
