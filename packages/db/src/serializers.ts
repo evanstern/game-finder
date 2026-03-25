@@ -1,5 +1,5 @@
 import type { Selectable } from 'kysely'
-import type { UsersTable, GameTable, GatheringTable } from './types.js'
+import type { UsersTable, GameTable, GatheringTable, GatheringParticipantTable, FriendshipTable } from './types.js'
 
 export function serializeUser(row: Selectable<UsersTable>) {
   return {
@@ -38,6 +38,32 @@ export function serializeGathering(row: Selectable<GatheringTable>) {
     maxPlayers: row.max_players,
     status: row.status,
     nextOccurrenceAt: row.next_occurrence_at,
+    visibility: row.visibility,
+    joinCode: row.join_code,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }
+}
+
+export function serializeParticipant(
+  row: Selectable<GatheringParticipantTable> & { display_name: string },
+) {
+  return {
+    id: row.id,
+    gatheringId: row.gathering_id,
+    userId: row.user_id,
+    displayName: row.display_name,
+    status: row.status,
+    createdAt: row.created_at,
+  }
+}
+
+export function serializeFriendship(row: Selectable<FriendshipTable>) {
+  return {
+    id: row.id,
+    requesterId: row.requester_id,
+    addresseeId: row.addressee_id,
+    status: row.status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }

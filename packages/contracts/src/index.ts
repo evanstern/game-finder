@@ -11,3 +11,5 @@ export {
 export * from './game.js'
 export * from './gathering.js'
 export * from './search.js'
+export * from './participant.js'
+export * from './friendship.js'

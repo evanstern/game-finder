@@ -14,7 +14,14 @@ export async function loader({ context }: Route.LoaderArgs) {
   const ctx = context as { cookie?: string }
   const trpc = createServerTRPC(ctx.cookie ?? '')
   const user = await trpc.auth.me.query().catch(() => null)
-  return { user }
+
+  let friendRequestCount = 0
+  if (user) {
+    const requests = await trpc.friendship.listIncomingRequests.query().catch(() => [])
+    friendRequestCount = requests.length
+  }
+
+  return { user, friendRequestCount }
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -43,7 +50,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 export default function Root({ loaderData }: Route.ComponentProps) {
   return (
     <>
-      <Nav user={loaderData.user} />
+      <Nav user={loaderData.user} friendRequestCount={loaderData.friendRequestCount} />
       <Outlet />
     </>
   )
