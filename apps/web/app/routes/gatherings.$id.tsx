@@ -1,25 +1,31 @@
 import { Badge } from '@game-finder/ui/components/badge'
 import { Button } from '@game-finder/ui/components/button'
+import { Input } from '@game-finder/ui/components/input'
+import { useState } from 'react'
 import { data, Form, Link, redirect } from 'react-router'
 import ReactMarkdown from 'react-markdown'
 import { MapBackground } from '../components/map-background.js'
 import { createServerTRPC } from '../trpc/server.js'
 import type { Route } from './+types/gatherings.$id.js'
 
-export async function loader({ params, context }: Route.LoaderArgs) {
+export async function loader({ request, params, context }: Route.LoaderArgs) {
   const ctx = context as { cookie?: string }
   const trpc = createServerTRPC(ctx.cookie ?? '')
 
-  const [user, gathering] = await Promise.all([
+  const [user, gathering, participants] = await Promise.all([
     trpc.auth.me.query().catch(() => null),
     trpc.gathering.getById.query({ id: params.id }).catch(() => null),
+    trpc.gathering.listParticipants.query({ gatheringId: params.id }).catch(() => []),
   ])
 
   if (!gathering) {
     throw data('Gathering not found', { status: 404 })
   }
 
-  return { gathering, user }
+  const url = new URL(request.url)
+  const joinCode = url.searchParams.get('code') ?? undefined
+
+  return { gathering, user, participants, joinCode }
 }
 
 export async function action({ request, params, context }: Route.ActionArgs) {
@@ -30,6 +36,14 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 
   if (intent === 'close') {
     await trpc.gathering.close.mutate({ id: params.id })
+  } else if (intent === 'join') {
+    const joinCode = String(formData.get('joinCode') ?? '')
+    await trpc.gathering.join.mutate({
+      gatheringId: params.id,
+      joinCode: joinCode || undefined,
+    })
+  } else if (intent === 'leave') {
+    await trpc.gathering.leave.mutate({ gatheringId: params.id })
   }
 
   return redirect(`/gatherings/${params.id}`)
@@ -48,8 +62,42 @@ function formatSchedule(scheduleType: string, startsAt: Date): string {
   }
 }
 
+function JoinForm({
+  gatheringId,
+  visibility,
+  joinCode,
+}: {
+  gatheringId: string
+  visibility: string
+  joinCode?: string
+}) {
+  const [code, setCode] = useState(joinCode ?? '')
+  const needsCode = visibility === 'private' && !joinCode
+
+  return (
+    <Form method="post" className="flex items-center gap-2">
+      <input type="hidden" name="intent" value="join" />
+      {visibility === 'private' && (
+        needsCode ? (
+          <Input
+            name="joinCode"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            placeholder="Enter join code"
+            className="w-40 text-sm"
+            required
+          />
+        ) : (
+          <input type="hidden" name="joinCode" value={joinCode} />
+        )
+      )}
+      <Button type="submit" size="sm">Join Game</Button>
+    </Form>
+  )
+}
+
 export default function GatheringDetails({ loaderData }: Route.ComponentProps) {
-  const { gathering, user } = loaderData
+  const { gathering, user, participants, joinCode } = loaderData
   const isOwner = user?.id === gathering.hostId
 
   return (
@@ -121,6 +169,82 @@ export default function GatheringDetails({ loaderData }: Route.ComponentProps) {
             {gathering.games.map((game) => (
               <Badge key={game.id} variant="outline" className="border-primary/30 text-primary">{game.name}</Badge>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Participants Section */}
+      <div className="animate-fade-in-up animation-delay-200 space-y-3">
+        <div className="flex items-center gap-3">
+          <p className="font-semibold text-[11px] tracking-[0.15em] text-primary uppercase">Players</p>
+          <span className="text-sm text-muted-foreground">
+            {gathering.participantCount}{gathering.maxPlayers ? `/${gathering.maxPlayers}` : ''} joined
+          </span>
+        </div>
+
+        {participants.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {participants.map((p) => (
+              <Badge
+                key={p.id}
+                variant={p.status === 'joined' ? 'outline' : 'secondary'}
+                className={p.status === 'joined' ? 'border-primary/30 text-primary' : ''}
+              >
+                {p.displayName}
+                {p.status === 'waitlisted' && ' (waitlisted)'}
+              </Badge>
+            ))}
+          </div>
+        )}
+
+        {user && !isOwner && gathering.status === 'active' && (
+          <div>
+            {gathering.currentUserStatus === null ? (
+              <JoinForm
+                gatheringId={gathering.id}
+                visibility={gathering.visibility}
+                joinCode={joinCode}
+              />
+            ) : (
+              <div className="flex items-center gap-3">
+                {gathering.currentUserStatus === 'waitlisted' && (
+                  <span className="text-sm text-muted-foreground">
+                    You&apos;re #{participants.filter((p) => p.status === 'waitlisted').findIndex((p) => p.userId === user.id) + 1} on the waitlist
+                  </span>
+                )}
+                <Form method="post">
+                  <input type="hidden" name="intent" value="leave" />
+                  <Button type="submit" variant="outline" size="sm">
+                    {gathering.currentUserStatus === 'waitlisted' ? 'Leave Waitlist' : 'Leave Game'}
+                  </Button>
+                </Form>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {isOwner && gathering.visibility === 'private' && gathering.joinCode && (
+        <div className="animate-fade-in-up animation-delay-200 rounded-lg border border-border bg-card/60 p-4 backdrop-blur-sm space-y-2">
+          <p className="font-semibold text-[11px] tracking-[0.15em] text-primary uppercase">Invite Link</p>
+          <div className="flex items-center gap-2">
+            <Input
+              readOnly
+              value={`${typeof window !== 'undefined' ? window.location.origin : ''}/gatherings/${gathering.id}?code=${gathering.joinCode}`}
+              className="text-xs"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              type="button"
+              onClick={() => {
+                navigator.clipboard.writeText(
+                  `${window.location.origin}/gatherings/${gathering.id}?code=${gathering.joinCode}`,
+                )
+              }}
+            >
+              Copy
+            </Button>
           </div>
         </div>
       )}
