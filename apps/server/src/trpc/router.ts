@@ -1,4 +1,5 @@
 import { authRouter } from './auth.js'
+import { friendshipRouter } from './friendship.js'
 import { gameRouter } from './game.js'
 import { gatheringRouter } from './gathering.js'
 import { createRouter, publicProcedure } from './init.js'
@@ -10,6 +11,7 @@ export const appRouter = createRouter({
     }),
   }),
   auth: authRouter,
+  friendship: friendshipRouter,
   game: gameRouter,
   gathering: gatheringRouter,
 })
