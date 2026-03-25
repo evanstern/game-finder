@@ -1,11 +1,39 @@
 import { Badge } from '@game-finder/ui/components/badge'
 import { Button } from '@game-finder/ui/components/button'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link } from 'react-router'
+import { data, Form, Link, redirect } from 'react-router'
 import ReactMarkdown from 'react-markdown'
 import { MapBackground } from '../components/map-background.js'
-import { useTRPC } from '../trpc/provider.js'
+import { createServerTRPC } from '../trpc/server.js'
 import type { Route } from './+types/gatherings.$id.js'
+
+export async function loader({ params, context }: Route.LoaderArgs) {
+  const ctx = context as { cookie?: string }
+  const trpc = createServerTRPC(ctx.cookie ?? '')
+
+  const [user, gathering] = await Promise.all([
+    trpc.auth.me.query().catch(() => null),
+    trpc.gathering.getById.query({ id: params.id }).catch(() => null),
+  ])
+
+  if (!gathering) {
+    throw data('Gathering not found', { status: 404 })
+  }
+
+  return { gathering, user }
+}
+
+export async function action({ request, params, context }: Route.ActionArgs) {
+  const ctx = context as { cookie?: string }
+  const trpc = createServerTRPC(ctx.cookie ?? '')
+  const formData = await request.formData()
+  const intent = String(formData.get('intent'))
+
+  if (intent === 'close') {
+    await trpc.gathering.close.mutate({ id: params.id })
+  }
+
+  return redirect(`/gatherings/${params.id}`)
+}
 
 function formatSchedule(scheduleType: string, startsAt: Date): string {
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -20,48 +48,9 @@ function formatSchedule(scheduleType: string, startsAt: Date): string {
   }
 }
 
-export default function GatheringDetails({ params }: Route.ComponentProps) {
-  const trpc = useTRPC()
-  const queryClient = useQueryClient()
-
-  const { data: currentUser } = useQuery(trpc.auth.me.queryOptions())
-  const { data: gathering, isLoading, error } = useQuery(
-    trpc.gathering.getById.queryOptions({ id: params.id }),
-  )
-
-  const closeMutation = useMutation(
-    trpc.gathering.close.mutationOptions({
-      onSuccess: async () => {
-        await queryClient.invalidateQueries({
-          queryKey: trpc.gathering.getById.queryOptions({ id: params.id }).queryKey,
-        })
-      },
-    }),
-  )
-
-  if (isLoading) {
-    return (
-      <div className="relative min-h-[calc(100vh-65px)]">
-        <MapBackground />
-        <div className="relative z-10 mx-auto max-w-4xl px-6 py-10">
-          <div className="h-8 w-48 animate-pulse rounded bg-muted" />
-        </div>
-      </div>
-    )
-  }
-
-  if (error || !gathering) {
-    return (
-      <div className="relative min-h-[calc(100vh-65px)]">
-        <MapBackground />
-        <div className="relative z-10 mx-auto max-w-4xl px-6 py-10 text-center">
-          <p className="text-lg text-muted-foreground">Gathering not found.</p>
-        </div>
-      </div>
-    )
-  }
-
-  const isOwner = currentUser?.id === gathering.hostId
+export default function GatheringDetails({ loaderData }: Route.ComponentProps) {
+  const { gathering, user } = loaderData
+  const isOwner = user?.id === gathering.hostId
 
   return (
     <div className="relative min-h-[calc(100vh-65px)]">
@@ -90,14 +79,10 @@ export default function GatheringDetails({ params }: Route.ComponentProps) {
                 <Link to={`/gatherings/${gathering.id}/edit`}>Edit</Link>
               </Button>
               {gathering.status === 'active' && (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  disabled={closeMutation.isPending}
-                  onClick={() => closeMutation.mutate({ id: gathering.id })}
-                >
-                  Close
-                </Button>
+                <Form method="post">
+                  <input type="hidden" name="intent" value="close" />
+                  <Button type="submit" variant="destructive" size="sm">Close</Button>
+                </Form>
               )}
             </>
           )}

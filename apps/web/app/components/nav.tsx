@@ -1,26 +1,17 @@
 import { Button } from '@game-finder/ui/components/button'
 import { Logo } from '@game-finder/ui/components/logo'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router'
-import { useTRPC } from '../trpc/provider.js'
+import { Link, useFetcher } from 'react-router'
 
-export function Nav() {
-  const trpc = useTRPC()
-  const queryClient = useQueryClient()
-  const navigate = useNavigate()
+interface NavUser {
+  id: string
+  displayName: string
+}
+
+export function Nav({ user }: { user: NavUser | null }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-
-  const { data: user, isLoading } = useQuery(trpc.auth.me.queryOptions())
-
-  const logoutMutation = useMutation(
-    trpc.auth.logout.mutationOptions({
-      onSuccess: () => {
-        queryClient.setQueryData(trpc.auth.me.queryOptions().queryKey, null)
-        navigate('/')
-      },
-    }),
-  )
+  const fetcher = useFetcher()
+  const isLoggingOut = fetcher.state !== 'idle'
 
   return (
     <nav className="border-b border-border bg-card/80 backdrop-blur-md">
@@ -45,9 +36,7 @@ export function Nav() {
           <Link to="/gatherings/new" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
             Post a Game
           </Link>
-          {isLoading ? (
-            <div className="h-3.5 w-20 animate-pulse rounded bg-muted" />
-          ) : user ? (
+          {user ? (
             <>
               <span className="text-sm font-medium text-primary">
                 {user.displayName}
@@ -58,16 +47,17 @@ export function Nav() {
               >
                 Dashboard
               </Link>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => logoutMutation.mutate()}
-                disabled={logoutMutation.isPending}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                Log Out
-              </Button>
+              <fetcher.Form method="post" action="/logout">
+                <Button
+                  type="submit"
+                  variant="ghost"
+                  size="sm"
+                  disabled={isLoggingOut}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  Log Out
+                </Button>
+              </fetcher.Form>
             </>
           ) : (
             <>
@@ -94,15 +84,18 @@ export function Nav() {
           {user ? (
             <>
               <span className="text-sm font-medium text-primary">{user.displayName}</span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => { logoutMutation.mutate(); setMobileMenuOpen(false) }}
-                className="text-muted-foreground justify-start"
-              >
-                Log Out
-              </Button>
+              <fetcher.Form method="post" action="/logout">
+                <Button
+                  type="submit"
+                  variant="ghost"
+                  size="sm"
+                  disabled={isLoggingOut}
+                  className="text-muted-foreground justify-start"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Log Out
+                </Button>
+              </fetcher.Form>
             </>
           ) : (
             <>

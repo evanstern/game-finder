@@ -1,42 +1,42 @@
 import { Badge } from '@game-finder/ui/components/badge'
 import { Button } from '@game-finder/ui/components/button'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Form, Link, redirect, useNavigation } from 'react-router'
 import { MapBackground } from '../components/map-background.js'
-import { useTRPC } from '../trpc/provider.js'
+import { createServerTRPC } from '../trpc/server.js'
+import type { Route } from './+types/dashboard.js'
 
-export default function Dashboard() {
-  const navigate = useNavigate()
-  const trpc = useTRPC()
-  const queryClient = useQueryClient()
+export async function loader({ context }: Route.LoaderArgs) {
+  const ctx = context as { cookie?: string }
+  const trpc = createServerTRPC(ctx.cookie ?? '')
 
-  const { data: currentUser, isLoading: authLoading } = useQuery(trpc.auth.me.queryOptions())
-  const { data: gatherings = [], isLoading: gatheringsLoading } = useQuery(
-    trpc.gathering.listByHost.queryOptions(),
-  )
+  const user = await trpc.auth.me.query().catch(() => null)
+  if (!user) throw redirect('/login?returnTo=/dashboard')
 
-  useEffect(() => {
-    if (!authLoading && !currentUser) navigate('/login')
-  }, [currentUser, authLoading, navigate])
+  const gatherings = await trpc.gathering.listByHost.query()
+  return { user, gatherings }
+}
 
-  const closeMutation = useMutation(
-    trpc.gathering.close.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries(trpc.gathering.listByHost.queryOptions())
-      },
-    }),
-  )
+export async function action({ request, context }: Route.ActionArgs) {
+  const ctx = context as { cookie?: string }
+  const trpc = createServerTRPC(ctx.cookie ?? '')
 
-  const deleteMutation = useMutation(
-    trpc.gathering.delete.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries(trpc.gathering.listByHost.queryOptions())
-      },
-    }),
-  )
+  const formData = await request.formData()
+  const intent = String(formData.get('intent'))
+  const gatheringId = String(formData.get('gatheringId'))
 
-  if (authLoading || !currentUser) return null
+  if (intent === 'close') {
+    await trpc.gathering.close.mutate({ id: gatheringId })
+  } else if (intent === 'delete') {
+    await trpc.gathering.delete.mutate({ id: gatheringId })
+  }
+
+  return redirect('/dashboard')
+}
+
+export default function Dashboard({ loaderData }: Route.ComponentProps) {
+  const { gatherings } = loaderData
+  const navigation = useNavigation()
+  const isPending = navigation.state !== 'idle'
 
   return (
     <div className="relative min-h-[calc(100vh-65px)]">
@@ -57,13 +57,7 @@ export default function Dashboard() {
         </Button>
       </div>
 
-      {gatheringsLoading ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-16 animate-pulse rounded-lg bg-muted" />
-          ))}
-        </div>
-      ) : gatherings.length === 0 ? (
+      {gatherings.length === 0 ? (
         <div className="animate-fade-in-up animation-delay-100 rounded-lg border border-border bg-card/60 p-10 text-center backdrop-blur-sm">
           <p className="text-sm text-muted-foreground">You have no gatherings yet.</p>
           <Button className="mt-4" asChild>
@@ -101,27 +95,23 @@ export default function Dashboard() {
                     <Link to={`/gatherings/${gathering.id}/edit`}>Edit</Link>
                   </Button>
                   {gathering.status === 'active' ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={closeMutation.isPending}
-                      onClick={() => closeMutation.mutate({ id: gathering.id })}
-                    >
-                      Close
-                    </Button>
+                    <Form method="post">
+                      <input type="hidden" name="intent" value="close" />
+                      <input type="hidden" name="gatheringId" value={gathering.id} />
+                      <Button type="submit" variant="outline" size="sm" disabled={isPending}>
+                        Close
+                      </Button>
+                    </Form>
                   ) : (
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      disabled={deleteMutation.isPending}
-                      onClick={() => {
-                        if (confirm(`Delete "${gathering.title}"? This cannot be undone.`)) {
-                          deleteMutation.mutate({ id: gathering.id })
-                        }
-                      }}
-                    >
-                      Delete
-                    </Button>
+                    <Form method="post" onSubmit={(e) => {
+                      if (!confirm(`Delete "${gathering.title}"? This cannot be undone.`)) {
+                        e.preventDefault()
+                      }
+                    }}>
+                      <input type="hidden" name="intent" value="delete" />
+                      <input type="hidden" name="gatheringId" value={gathering.id} />
+                      <Button type="submit" variant="destructive" size="sm" disabled={isPending}>Delete</Button>
+                    </Form>
                   )}
                 </div>
               </div>

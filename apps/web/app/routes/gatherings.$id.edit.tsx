@@ -1,9 +1,7 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect } from 'react'
-import { useNavigate } from 'react-router'
+import { redirect, useNavigation } from 'react-router'
 import { GatheringForm } from '../components/gathering-form.js'
 import { MapBackground } from '../components/map-background.js'
-import { useTRPC } from '../trpc/provider.js'
+import { createServerTRPC } from '../trpc/server.js'
 import type { Route } from './+types/gatherings.$id.edit.js'
 
 function toDatetimeLocal(date: Date): string {
@@ -18,82 +16,80 @@ function toDateInput(date: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
-export default function EditGathering({ params }: Route.ComponentProps) {
-  const navigate = useNavigate()
-  const trpc = useTRPC()
-  const queryClient = useQueryClient()
+export async function loader({ params, context }: Route.LoaderArgs) {
+  const ctx = context as { cookie?: string }
+  const trpc = createServerTRPC(ctx.cookie ?? '')
 
-  const { data: currentUser, isLoading: authLoading } = useQuery(trpc.auth.me.queryOptions())
-  const { data: gathering, isLoading: gatheringLoading } = useQuery(
-    trpc.gathering.getById.queryOptions({ id: params.id }),
-  )
+  const user = await trpc.auth.me.query().catch(() => null)
+  if (!user) throw redirect(`/login?returnTo=/gatherings/${params.id}/edit`)
 
-  useEffect(() => {
-    if (!authLoading && !currentUser) navigate('/login')
-  }, [currentUser, authLoading, navigate])
+  const gathering = await trpc.gathering.getById.query({ id: params.id }).catch(() => null)
+  if (!gathering) throw redirect('/dashboard')
+  if (gathering.hostId !== user.id) throw redirect(`/gatherings/${params.id}`)
 
-  useEffect(() => {
-    if (!gatheringLoading && gathering && currentUser) {
-      if (gathering.hostId !== currentUser.id) {
-        navigate(`/gatherings/${params.id}`)
-      }
-    }
-  }, [gathering, gatheringLoading, currentUser, navigate, params.id])
+  const games = await trpc.game.list.query({})
 
-  const updateMutation = useMutation(trpc.gathering.update.mutationOptions())
-
-  const isLoading = authLoading || gatheringLoading
-
-  if (isLoading || !currentUser || !gathering) return null
-
-  if (gathering.hostId !== currentUser.id) return null
-
-  const initialData = {
-    title: gathering.title,
-    gameIds: gathering.games.map((g) => g.id),
-    zipCode: gathering.zipCode,
-    scheduleType: gathering.scheduleType,
-    startsAt: toDatetimeLocal(new Date(gathering.startsAt)),
-    endDate: gathering.endDate ? toDateInput(new Date(gathering.endDate)) : '',
-    durationMinutes: gathering.durationMinutes != null ? String(gathering.durationMinutes) : '',
-    maxPlayers: gathering.maxPlayers != null ? String(gathering.maxPlayers) : '',
-    description: gathering.description,
+  return {
+    gathering: {
+      title: gathering.title,
+      gameIds: gathering.games.map((g) => g.id),
+      zipCode: gathering.zipCode,
+      scheduleType: gathering.scheduleType,
+      startsAt: toDatetimeLocal(new Date(gathering.startsAt)),
+      endDate: gathering.endDate ? toDateInput(new Date(gathering.endDate)) : '',
+      durationMinutes: gathering.durationMinutes != null ? String(gathering.durationMinutes) : '',
+      maxPlayers: gathering.maxPlayers != null ? String(gathering.maxPlayers) : '',
+      description: gathering.description,
+    },
+    games,
   }
+}
+
+export async function action({ request, params, context }: Route.ActionArgs) {
+  const ctx = context as { cookie?: string }
+  const trpc = createServerTRPC(ctx.cookie ?? '')
+
+  const user = await trpc.auth.me.query().catch(() => null)
+  if (!user) throw redirect(`/login?returnTo=/gatherings/${params.id}/edit`)
+
+  const formData = await request.formData()
+
+  try {
+    await trpc.gathering.update.mutate({
+      id: params.id,
+      title: String(formData.get('title') ?? ''),
+      gameIds: formData.getAll('gameIds').map(String),
+      zipCode: String(formData.get('zipCode') ?? ''),
+      scheduleType: String(formData.get('scheduleType') ?? 'once'),
+      startsAt: new Date(String(formData.get('startsAt'))).toISOString(),
+      endDate: formData.get('endDate') ? new Date(String(formData.get('endDate'))).toISOString() : null,
+      durationMinutes: formData.get('durationMinutes') ? parseInt(String(formData.get('durationMinutes')), 10) : null,
+      maxPlayers: formData.get('maxPlayers') ? parseInt(String(formData.get('maxPlayers')), 10) : null,
+      description: String(formData.get('description') ?? ''),
+    })
+    return redirect(`/gatherings/${params.id}`)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to update gathering'
+    return { errors: { form: message } }
+  }
+}
+
+export default function EditGathering({ loaderData, actionData }: Route.ComponentProps) {
+  const navigation = useNavigation()
+  const isPending = navigation.state === 'submitting'
 
   return (
     <div className="relative min-h-[calc(100vh-65px)]">
       <MapBackground />
-
-    <div className="relative z-10 mx-auto max-w-4xl px-6 py-10">
-      <GatheringForm
-        submitLabel="Save Changes"
-        isPending={updateMutation.isPending}
-        initialData={initialData}
-        errors={updateMutation.error ? { form: updateMutation.error.message } : {}}
-        onSubmit={(data) => {
-          updateMutation.mutate(
-            {
-              id: params.id,
-              title: data.title,
-              gameIds: data.gameIds,
-              zipCode: data.zipCode,
-              scheduleType: data.scheduleType,
-              startsAt: new Date(data.startsAt).toISOString(),
-              endDate: data.endDate ? new Date(data.endDate).toISOString() : null,
-              durationMinutes: data.durationMinutes ? parseInt(data.durationMinutes, 10) : null,
-              maxPlayers: data.maxPlayers ? parseInt(data.maxPlayers, 10) : null,
-              description: data.description,
-            },
-            {
-              onSuccess: () => {
-                queryClient.invalidateQueries(trpc.gathering.getById.queryOptions({ id: params.id }))
-                navigate(`/gatherings/${params.id}`)
-              },
-            },
-          )
-        }}
-      />
-    </div>
+      <div className="relative z-10 mx-auto max-w-4xl px-6 py-10">
+        <GatheringForm
+          submitLabel="Save Changes"
+          isPending={isPending}
+          initialData={loaderData.gathering}
+          games={loaderData.games}
+          errors={actionData?.errors}
+        />
+      </div>
     </div>
   )
 }

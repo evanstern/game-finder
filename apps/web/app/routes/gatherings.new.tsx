@@ -1,60 +1,62 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router'
+import { redirect, useNavigation } from 'react-router'
 import { GatheringForm } from '../components/gathering-form.js'
 import { MapBackground } from '../components/map-background.js'
-import { useTRPC } from '../trpc/provider.js'
+import { createServerTRPC } from '../trpc/server.js'
+import type { Route } from './+types/gatherings.new.js'
 
-export default function NewGathering() {
-  const navigate = useNavigate()
-  const trpc = useTRPC()
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+export async function loader({ context }: Route.LoaderArgs) {
+  const ctx = context as { cookie?: string }
+  const trpc = createServerTRPC(ctx.cookie ?? '')
+  const user = await trpc.auth.me.query().catch(() => null)
+  if (!user) throw redirect('/login?returnTo=/gatherings/new')
 
-  const { data: currentUser, isLoading } = useQuery(trpc.auth.me.queryOptions())
+  const games = await trpc.game.list.query({})
+  return { games }
+}
 
-  useEffect(() => {
-    if (!isLoading && !currentUser) navigate('/login')
-  }, [currentUser, isLoading, navigate])
+export async function action({ request, context }: Route.ActionArgs) {
+  const ctx = context as { cookie?: string }
+  const trpc = createServerTRPC(ctx.cookie ?? '')
 
-  const createMutation = useMutation(trpc.gathering.create.mutationOptions())
+  const user = await trpc.auth.me.query().catch(() => null)
+  if (!user) throw redirect('/login?returnTo=/gatherings/new')
 
-  if (isLoading || !currentUser) return null
+  const formData = await request.formData()
+
+  try {
+    const result = await trpc.gathering.create.mutate({
+      title: String(formData.get('title') ?? ''),
+      gameIds: formData.getAll('gameIds').map(String),
+      zipCode: String(formData.get('zipCode') ?? ''),
+      scheduleType: String(formData.get('scheduleType') ?? 'once'),
+      startsAt: new Date(String(formData.get('startsAt'))).toISOString(),
+      endDate: formData.get('endDate') ? new Date(String(formData.get('endDate'))).toISOString() : null,
+      durationMinutes: formData.get('durationMinutes') ? parseInt(String(formData.get('durationMinutes')), 10) : null,
+      maxPlayers: formData.get('maxPlayers') ? parseInt(String(formData.get('maxPlayers')), 10) : null,
+      description: String(formData.get('description') ?? ''),
+    })
+    return redirect(`/gatherings/${result.id}`)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to create gathering'
+    return { errors: { form: message } }
+  }
+}
+
+export default function NewGathering({ loaderData, actionData }: Route.ComponentProps) {
+  const navigation = useNavigation()
+  const isPending = navigation.state === 'submitting'
 
   return (
     <div className="relative min-h-[calc(100vh-65px)]">
       <MapBackground />
-
-    <div className="relative z-10 mx-auto max-w-4xl px-6 py-10">
-      <GatheringForm
-        submitLabel="Create Gathering"
-        isPending={createMutation.isPending}
-        errors={formErrors}
-        onSubmit={(data) => {
-          setFormErrors({})
-          createMutation.mutate(
-            {
-              title: data.title,
-              gameIds: data.gameIds,
-              zipCode: data.zipCode,
-              scheduleType: data.scheduleType,
-              startsAt: new Date(data.startsAt).toISOString(),
-              endDate: data.endDate ? new Date(data.endDate).toISOString() : null,
-              durationMinutes: data.durationMinutes ? parseInt(data.durationMinutes, 10) : null,
-              maxPlayers: data.maxPlayers ? parseInt(data.maxPlayers, 10) : null,
-              description: data.description,
-            },
-            {
-              onSuccess: (result) => {
-                navigate(`/gatherings/${result.id}`)
-              },
-              onError: (error) => {
-                setFormErrors({ form: error.message })
-              },
-            },
-          )
-        }}
-      />
-    </div>
+      <div className="relative z-10 mx-auto max-w-4xl px-6 py-10">
+        <GatheringForm
+          submitLabel="Create Gathering"
+          isPending={isPending}
+          games={loaderData.games}
+          errors={actionData?.errors}
+        />
+      </div>
     </div>
   )
 }

@@ -8,52 +8,61 @@ import {
 } from '@game-finder/ui/components/card'
 import { Input } from '@game-finder/ui/components/input'
 import { Label } from '@game-finder/ui/components/label'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Form, Link, redirect, useNavigation } from 'react-router'
 import { MapBackground } from '../components/map-background.js'
-import { useTRPC } from '../trpc/provider.js'
+import { createServerTRPC } from '../trpc/server.js'
+import type { Route } from './+types/signup.js'
 
-export default function SignUp() {
-  const navigate = useNavigate()
-  const trpc = useTRPC()
-  const queryClient = useQueryClient()
+export async function loader({ context }: Route.LoaderArgs) {
+  const ctx = context as { cookie?: string }
+  const trpc = createServerTRPC(ctx.cookie ?? '')
+  const user = await trpc.auth.me.query().catch(() => null)
+  if (user) throw redirect('/')
+  return {}
+}
 
-  const { data: currentUser } = useQuery(trpc.auth.me.queryOptions())
+export async function action({ request, context }: Route.ActionArgs) {
+  const ctx = context as { cookie?: string }
+  const formData = await request.formData()
+  const displayName = String(formData.get('displayName') ?? '')
+  const email = String(formData.get('email') ?? '')
+  const password = String(formData.get('password') ?? '')
 
-  useEffect(() => {
-    if (currentUser) navigate('/')
-  }, [currentUser, navigate])
+  const serverUrl = process.env.SERVER_URL
+  if (!serverUrl) throw new Error('SERVER_URL environment variable is required')
 
-  const [displayName, setDisplayName] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  const res = await fetch(`${serverUrl}/trpc/auth.register`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      ...(ctx.cookie ? { cookie: ctx.cookie } : {}),
+    },
+    body: JSON.stringify({ displayName, email, password }),
+  })
 
-  const registerMutation = useMutation(
-    trpc.auth.register.mutationOptions({
-      onSuccess: (data) => {
-        queryClient.setQueryData(
-          trpc.auth.me.queryOptions().queryKey,
-          data.user,
-        )
-        navigate('/')
-      },
-      onError: (error) => {
-        if (error.message === 'Email already in use') {
-          setErrors({ email: 'Email already in use' })
-        } else {
-          setErrors({ form: error.message })
-        }
-      },
-    }),
-  )
+  const body = await res.json()
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setErrors({})
-    registerMutation.mutate({ displayName, email, password })
+  if (!res.ok || body.error) {
+    const message = body.error?.message ?? 'Registration failed'
+    if (message === 'Email already in use') {
+      return { errors: { email: message } }
+    }
+    return { errors: { form: message } }
   }
+
+  const setCookies = res.headers.getSetCookie()
+  const headers = new Headers()
+  for (const cookie of setCookies) {
+    headers.append('set-cookie', cookie)
+  }
+
+  return redirect('/', { headers })
+}
+
+export default function SignUp({ actionData }: Route.ComponentProps) {
+  const navigation = useNavigation()
+  const isPending = navigation.state === 'submitting'
+  const errors = actionData?.errors ?? {}
 
   return (
     <div className="relative flex min-h-[calc(100vh-65px)] items-center justify-center px-6">
@@ -68,7 +77,7 @@ export default function SignUp() {
             Create an account
           </CardTitle>
         </CardHeader>
-        <form onSubmit={handleSubmit}>
+        <Form method="post">
           <CardContent className="space-y-5">
             {errors.form && (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2.5">
@@ -81,8 +90,7 @@ export default function SignUp() {
               </Label>
               <Input
                 id="displayName"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
+                name="displayName"
                 placeholder="How others will see you"
                 required
               />
@@ -98,9 +106,8 @@ export default function SignUp() {
               </Label>
               <Input
                 id="email"
+                name="email"
                 type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 required
               />
@@ -114,9 +121,8 @@ export default function SignUp() {
               </Label>
               <Input
                 id="password"
+                name="password"
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
                 placeholder="8 characters minimum"
                 required
                 minLength={8}
@@ -130,9 +136,9 @@ export default function SignUp() {
             <Button
               type="submit"
               className="w-full"
-              disabled={registerMutation.isPending}
+              disabled={isPending}
             >
-              {registerMutation.isPending ? 'Creating account...' : 'Create Account'}
+              {isPending ? 'Creating account...' : 'Create Account'}
             </Button>
             <p className="text-sm text-muted-foreground">
               Already have an account?{' '}
@@ -144,7 +150,7 @@ export default function SignUp() {
               </Link>
             </p>
           </CardFooter>
-        </form>
+        </Form>
       </Card>
     </div>
   )
