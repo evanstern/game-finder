@@ -8,7 +8,7 @@ interface NavUser {
   displayName: string
 }
 
-export function Nav({ user }: { user: NavUser | null }) {
+export function Nav({ user, friendRequestCount = 0 }: { user: NavUser | null; friendRequestCount?: number }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const fetcher = useFetcher()
   const isLoggingOut = fetcher.state !== 'idle'
@@ -47,6 +47,17 @@ export function Nav({ user }: { user: NavUser | null }) {
               >
                 Dashboard
               </Link>
+              <Link
+                to="/friends"
+                className="relative text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Friends
+                {friendRequestCount > 0 && (
+                  <span className="absolute -top-1.5 -right-3 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                    {friendRequestCount}
+                  </span>
+                )}
+              </Link>
               <fetcher.Form method="post" action="/logout">
                 <Button
                   type="submit"
@@ -84,6 +95,9 @@ export function Nav({ user }: { user: NavUser | null }) {
           {user ? (
             <>
               <span className="text-sm font-medium text-primary">{user.displayName}</span>
+              <Link to="/friends" className="text-sm text-muted-foreground" onClick={() => setMobileMenuOpen(false)}>
+                Friends{friendRequestCount > 0 ? ` (${friendRequestCount})` : ''}
+              </Link>
               <fetcher.Form method="post" action="/logout">
                 <Button
                   type="submit"
