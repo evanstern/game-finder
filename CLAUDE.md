@@ -11,6 +11,9 @@ Game Finder is a prototype app for finding local tabletop games (board games, D&
 - Database: PostgreSQL
 - ORM: Kysely (with kysely-codegen for type generation)
 - Cache/Queue: Redis (when needed)
+- Linter/Formatter: Biome
+- Test Runner: Vitest
+- Node: >=22 required
 
 ### Apps
 
@@ -51,6 +54,25 @@ Game Finder is a prototype app for finding local tabletop games (board games, D&
 ### Environment Variables
 
 - Never fallback required env vars — throw if missing
+
+## Commands
+
+```bash
+pnpm dev              # Start all apps in dev mode
+pnpm build            # Build all packages
+pnpm test             # Run all tests (Vitest)
+pnpm lint             # Lint all packages (Biome)
+pnpm format           # Format all packages (Biome)
+pnpm typecheck        # Type-check all packages
+```
+
+### Database
+
+```bash
+pnpm --filter db migrate       # Run migrations
+pnpm --filter db seed           # Seed database
+pnpm --filter db seed:zip-codes # Seed zip code data
+```
 
 ## Package Manager
 
