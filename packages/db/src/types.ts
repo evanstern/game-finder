@@ -53,6 +53,15 @@ export interface GatheringParticipantTable {
   created_at: Generated<Date>
 }
 
+export interface FriendshipTable {
+  id: Generated<string>
+  requester_id: string
+  addressee_id: string
+  status: Generated<'pending' | 'accepted' | 'declined'>
+  created_at: Generated<Date>
+  updated_at: Generated<Date>
+}
+
 export interface ZipCodeLocationTable {
   zip_code: string
   city: string
@@ -68,4 +77,5 @@ export interface Database {
   gathering_game: GatheringGameTable
   gathering_participant: GatheringParticipantTable
   zip_code_location: ZipCodeLocationTable
+  friendship: FriendshipTable
 }
