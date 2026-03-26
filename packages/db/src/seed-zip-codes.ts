@@ -1,6 +1,8 @@
 import { createReadStream } from 'node:fs'
 import { createInterface } from 'node:readline'
 import { resolve } from 'node:path'
+import type { Kysely } from 'kysely'
+import type { Database } from './types.js'
 import { createDb } from './client.js'
 
 const CSV_PATH = resolve(import.meta.dirname, '../data/us-zip-codes.csv')
@@ -37,9 +39,7 @@ function parseCsvLine(header: string[], line: string): Record<string, string> {
   return record
 }
 
-async function main() {
-  const db = createDb()
-
+export async function seedZipCodes(db: Kysely<Database>) {
   const existing = await db
     .selectFrom('zip_code_location')
     .select('zip_code')
@@ -48,7 +48,6 @@ async function main() {
 
   if (existing) {
     console.log('ZIP code data already seeded, skipping.')
-    await db.destroy()
     return
   }
 
@@ -106,10 +105,15 @@ async function main() {
   }
 
   console.log(`Seeded ${rows.length} ZIP codes.`)
-  await db.destroy()
 }
 
-main().catch((err) => {
-  console.error('Failed to seed ZIP codes:', err)
-  process.exit(1)
-})
+const isMain = process.argv[1]?.includes('seed-zip-codes')
+if (isMain) {
+  const db = createDb()
+  seedZipCodes(db)
+    .then(() => db.destroy())
+    .catch((err) => {
+      console.error('Failed to seed ZIP codes:', err)
+      process.exit(1)
+    })
+}
