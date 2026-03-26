@@ -29,9 +29,9 @@ const GAMES = [
 ]
 
 const USERS = [
-  { id: 'aaaaaaaa-0000-0000-0000-000000000001', email: 'host1@test.com', display_name: 'DungeonMaster42' },
-  { id: 'aaaaaaaa-0000-0000-0000-000000000002', email: 'host2@test.com', display_name: 'BoardGameBaron' },
-  { id: 'aaaaaaaa-0000-0000-0000-000000000003', email: 'host3@test.com', display_name: 'CardSharkKelly' },
+  { id: 'aaaaaaaa-0000-4000-a000-000000000001', email: 'host1@test.com', display_name: 'DungeonMaster42' },
+  { id: 'aaaaaaaa-0000-4000-a000-000000000002', email: 'host2@test.com', display_name: 'BoardGameBaron' },
+  { id: 'aaaaaaaa-0000-4000-a000-000000000003', email: 'host3@test.com', display_name: 'CardSharkKelly' },
 ]
 
 const GATHERINGS = [
