@@ -8,7 +8,9 @@
     "format": "turbo run format",
     "format:check": "turbo run format:check",
     "typecheck": "turbo run typecheck",
-    "test": "turbo run test"
+    "test": "turbo run test",
+    "docker:migrate": "docker compose exec server pnpm --filter db migrate",
+    "docker:seed": "docker compose exec server pnpm --filter db seed"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.0",
