@@ -1,5 +1,6 @@
 import { sql } from 'kysely'
 import { createDb } from './client.js'
+import { seedZipCodes } from './seed-zip-codes.js'
 
 const GAMES = [
   // Board games
@@ -53,6 +54,9 @@ const DUMMY_HASH = '$2a$10$abcdefghijklmnopqrstuuKxYzAbCdEfGhIjKlMnOpQrStUvWxYz'
 
 async function seed() {
   const db = createDb()
+
+  // Seed ZIP codes (needed for gathering location lookups)
+  await seedZipCodes(db)
 
   // Seed games
   const existingGame = await db.selectFrom('game').select('id').executeTakeFirst()
