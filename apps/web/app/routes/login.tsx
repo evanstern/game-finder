@@ -50,7 +50,8 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   if (!res.ok || body.error) {
     const message = body.error?.message ?? 'Login failed'
-    return { errors: { form: message } as Record<string, string> }
+    const errors: Record<string, string> = { form: message }
+    return { errors }
   }
 
   const setCookies = res.headers.getSetCookie()

@@ -20,7 +20,7 @@ import {
 } from '@game-finder/ui/components/select'
 import { useState } from 'react'
 import { Link, useNavigation, useSearchParams } from 'react-router'
-import { ClientDate } from '../components/client-date.js'
+import { ClientDate, SCHEDULE_LABELS } from '../components/client-date.js'
 import { MapBackground } from '../components/map-background.js'
 import { createServerTRPC } from '../trpc/server.js'
 import type { Route } from './+types/search.js'
@@ -34,13 +34,6 @@ const GAME_TYPE_LABELS: Record<GameType, string> = {
 }
 
 const RADIUS_OPTIONS = [5, 10, 25, 50]
-
-const SCHEDULE_LABELS: Record<string, string> = {
-  once: 'One-time',
-  weekly: 'Every week',
-  biweekly: 'Every other week',
-  monthly: 'Monthly',
-}
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const ctx = context as { cookie?: string }

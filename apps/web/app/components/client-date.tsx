@@ -92,14 +92,19 @@ export function ScheduleLabel({
   )
 }
 
+const pad = (n: number) => String(n).padStart(2, '0')
+
 export function toDatetimeLocal(date: Date): string {
-  const d = new Date(date)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
 export function toDateInput(date: Date): string {
-  const d = new Date(date)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+export const SCHEDULE_LABELS: Record<string, string> = {
+  once: 'One-time',
+  weekly: 'Weekly',
+  biweekly: 'Every other week',
+  monthly: 'Monthly',
 }

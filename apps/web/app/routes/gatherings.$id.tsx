@@ -49,7 +49,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
   const formData = await request.formData()
   const intent = String(formData.get('intent'))
 
-  let actionResult = ''
+  let actionResult: ActionResult | '' = ''
 
   if (intent === 'close') {
     await trpc.gathering.close.mutate({ id: params.id })
@@ -109,7 +109,9 @@ function JoinForm({
   )
 }
 
-const ACTION_MESSAGES: Record<string, string> = {
+type ActionResult = 'joined' | 'left' | 'closed' | 'friend_request_sent'
+
+const ACTION_MESSAGES: Record<ActionResult, string> = {
   joined: 'You joined the game!',
   left: 'You left the game.',
   closed: 'Gathering closed.',
@@ -118,14 +120,11 @@ const ACTION_MESSAGES: Record<string, string> = {
 
 function ActionToast() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const action = searchParams.get('action')
-  const [visible, setVisible] = useState(false)
+  const action = searchParams.get('action') as ActionResult | null
 
   useEffect(() => {
     if (action && ACTION_MESSAGES[action]) {
-      setVisible(true)
       const timer = setTimeout(() => {
-        setVisible(false)
         setSearchParams((prev) => {
           prev.delete('action')
           return prev
@@ -135,7 +134,7 @@ function ActionToast() {
     }
   }, [action, setSearchParams])
 
-  if (!visible || !action || !ACTION_MESSAGES[action]) return null
+  if (!action || !ACTION_MESSAGES[action]) return null
 
   return (
     <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 animate-fade-in-up rounded-lg border border-primary/30 bg-primary/10 px-4 py-2.5 text-sm text-primary backdrop-blur-sm">
