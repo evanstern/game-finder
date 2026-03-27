@@ -157,7 +157,14 @@ export default function GatheringDetails({ loaderData }: Route.ComponentProps) {
                 <Link to={`/gatherings/${gathering.id}/edit`}>Edit</Link>
               </Button>
               {gathering.status === 'active' && (
-                <Form method="post">
+                <Form
+                  method="post"
+                  onSubmit={(e) => {
+                    if (!window.confirm('Are you sure you want to close this gathering? This cannot be undone.')) {
+                      e.preventDefault()
+                    }
+                  }}
+                >
                   <input type="hidden" name="intent" value="close" />
                   <Button type="submit" variant="destructive" size="sm">Close</Button>
                 </Form>
@@ -181,7 +188,7 @@ export default function GatheringDetails({ loaderData }: Route.ComponentProps) {
           )}
           <div>
             <p className="font-semibold text-[11px] tracking-[0.15em] text-primary uppercase mb-1.5">Location</p>
-            <p className="text-foreground">{gathering.zipCode}</p>
+            <p className="text-foreground">{gathering.locationLabel}</p>
           </div>
           {gathering.maxPlayers && (
             <div>

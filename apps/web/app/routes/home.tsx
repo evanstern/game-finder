@@ -3,7 +3,7 @@ import { Button } from '@game-finder/ui/components/button'
 import { Input } from '@game-finder/ui/components/input'
 import { Logo } from '@game-finder/ui/components/logo'
 import { Fragment, useState } from 'react'
-import { useNavigate, useRouteLoaderData } from 'react-router'
+import { useNavigate, useRouteLoaderData, useSearchParams } from 'react-router'
 import { MapBackground } from '../components/map-background.js'
 
 const POPULAR_TAGS = [
@@ -91,6 +91,8 @@ function SearchCard() {
 export default function Home() {
   const rootData = useRouteLoaderData('root') as { user: { displayName: string } | null }
   const user = rootData?.user
+  const [searchParams] = useSearchParams()
+  const isNewUser = searchParams.get('welcome') === 'new'
 
   return (
     <div className="relative min-h-[calc(100vh-65px)]">
@@ -108,7 +110,7 @@ export default function Home() {
           {user ? (
             <>
               <p className="text-xs text-[rgba(255,191,71,0.5)] uppercase tracking-[0.2em] mb-2">
-                Welcome back, {user.displayName}
+                {isNewUser ? 'Welcome' : 'Welcome back'}, {user.displayName}
               </p>
               <p className="text-muted-foreground text-sm">
                 Find your next game night

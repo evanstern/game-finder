@@ -56,7 +56,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     headers.append('set-cookie', cookie)
   }
 
-  return redirect('/', { headers })
+  return redirect('/?welcome=new', { headers })
 }
 
 export default function SignUp({ actionData }: Route.ComponentProps) {

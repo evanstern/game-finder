@@ -337,10 +337,10 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
 
                             {gathering.games.length > 0 && (
                               <div className="mt-2 flex flex-wrap gap-1">
-                                {gathering.games.map((game) => (
+                                {[...new Set(gathering.games.map((game) => game.type as GameType))].map((type) => (
                                   <GameTypeBadge
-                                    key={game.id}
-                                    type={game.type as GameType}
+                                    key={type}
+                                    type={type}
                                   />
                                 ))}
                                 {gathering.games.map((game) => (
