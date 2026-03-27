@@ -84,7 +84,7 @@ export default function SignUp({ actionData }: Route.ComponentProps) {
             Create an account
           </CardTitle>
         </CardHeader>
-        <Form method="post">
+        <Form method="post" noValidate>
           <CardContent className="space-y-5">
             {errors.form && (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2.5">

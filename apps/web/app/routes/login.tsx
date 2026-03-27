@@ -82,7 +82,7 @@ export default function LogIn({ actionData }: Route.ComponentProps) {
             Log in to your account
           </CardTitle>
         </CardHeader>
-        <Form method="post">
+        <Form method="post" noValidate>
           <CardContent className="space-y-5">
             {errors.form && (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2.5">
