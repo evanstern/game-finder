@@ -23,6 +23,7 @@ COPY --from=deps /app/packages/db/node_modules ./packages/db/node_modules
 COPY --from=deps /app/packages/contracts/node_modules ./packages/contracts/node_modules
 COPY --from=build /app/apps/server/dist ./apps/server/dist
 COPY --from=build /app/packages/db/src ./packages/db/src
+COPY --from=build /app/packages/db/data ./packages/db/data
 COPY --from=build /app/packages/contracts/src ./packages/contracts/src
 COPY --from=build /app/packages/shared/src ./packages/shared/src
 COPY --from=build /app/package.json ./
