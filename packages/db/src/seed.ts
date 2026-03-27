@@ -1,3 +1,4 @@
+import bcrypt from 'bcryptjs'
 import { sql } from 'kysely'
 import { createDb } from './client.js'
 import { seedZipCodes } from './seed-zip-codes.js'
@@ -49,11 +50,12 @@ const GATHERINGS = [
   { host: 'host1@test.com', title: 'Terraforming Mars Tournament', description: 'Single-elimination tournament. Entry is free. Prizes for top 3!', zip_code: '44333', schedule_type: 'once' as const, starts_at: '2026-04-19T10:00:00-04:00', duration_minutes: 360, max_players: 16, games: ['Terraforming Mars'] },
 ]
 
-// Dummy bcrypt hash (password: "password123")
-const DUMMY_HASH = '$2a$10$abcdefghijklmnopqrstuuKxYzAbCdEfGhIjKlMnOpQrStUvWxYz'
+const SEED_PASSWORD = 'password123'
+const SALT_ROUNDS = 10
 
 async function seed() {
   const db = createDb()
+  const passwordHash = await bcrypt.hash(SEED_PASSWORD, SALT_ROUNDS)
 
   // Seed ZIP codes (needed for gathering location lookups)
   await seedZipCodes(db)
@@ -73,7 +75,7 @@ async function seed() {
     console.log('Users already seeded, skipping.')
   } else {
     await db.insertInto('users')
-      .values(USERS.map((u) => ({ ...u, password_hash: DUMMY_HASH })))
+      .values(USERS.map((u) => ({ ...u, password_hash: passwordHash })))
       .execute()
     console.log(`Seeded ${USERS.length} test users.`)
   }

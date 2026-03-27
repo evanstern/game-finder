@@ -12,7 +12,9 @@ export const createGatheringSchema = z.object({
   gameIds: z.array(z.string().uuid()).min(1),
   zipCode: z.string().min(5).max(10),
   scheduleType: scheduleTypeSchema,
-  startsAt: z.coerce.date(),
+  startsAt: z.coerce.date().refine((date) => date > new Date(), {
+    message: 'Start date must be in the future',
+  }),
   endDate: z.coerce.date().nullable().optional(),
   durationMinutes: z.number().int().positive().nullable().optional(),
   maxPlayers: z.number().int().positive().nullable().optional(),

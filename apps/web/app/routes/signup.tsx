@@ -28,6 +28,13 @@ export async function action({ request, context }: Route.ActionArgs) {
   const email = String(formData.get('email') ?? '')
   const password = String(formData.get('password') ?? '')
 
+  const errors: Record<string, string> = {}
+  if (!displayName) errors.displayName = 'Display name is required'
+  if (!email) errors.email = 'Email is required'
+  if (!password) errors.password = 'Password is required'
+  else if (password.length < 8) errors.password = 'Password must be at least 8 characters'
+  if (Object.keys(errors).length > 0) return { errors }
+
   const serverUrl = process.env.SERVER_URL
   if (!serverUrl) throw new Error('SERVER_URL environment variable is required')
 
@@ -45,9 +52,9 @@ export async function action({ request, context }: Route.ActionArgs) {
   if (!res.ok || body.error) {
     const message = body.error?.message ?? 'Registration failed'
     if (message === 'Email already in use') {
-      return { errors: { email: message } }
+      return { errors: { email: message } as Record<string, string> }
     }
-    return { errors: { form: message } }
+    return { errors: { form: message } as Record<string, string> }
   }
 
   const setCookies = res.headers.getSetCookie()
@@ -56,7 +63,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     headers.append('set-cookie', cookie)
   }
 
-  return redirect('/', { headers })
+  return redirect('/?welcome=new', { headers })
 }
 
 export default function SignUp({ actionData }: Route.ComponentProps) {
@@ -77,7 +84,7 @@ export default function SignUp({ actionData }: Route.ComponentProps) {
             Create an account
           </CardTitle>
         </CardHeader>
-        <Form method="post">
+        <Form method="post" noValidate>
           <CardContent className="space-y-5">
             {errors.form && (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2.5">

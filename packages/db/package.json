@@ -19,6 +19,7 @@
     "seed:zip-codes": "tsx src/seed-zip-codes.ts"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "ioredis": "^5.10.1",
     "kysely": "^0.27.0",
     "pg": "^8.13.0"

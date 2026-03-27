@@ -1,6 +1,7 @@
 import { redirect, useNavigation } from 'react-router'
 import { GatheringForm } from '../components/gathering-form.js'
 import { MapBackground } from '../components/map-background.js'
+import { parseGatheringErrors } from '../utils/parse-gathering-errors.js'
 import { createServerTRPC } from '../trpc/server.js'
 import type { Route } from './+types/gatherings.new.js'
 
@@ -38,8 +39,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     })
     return redirect(`/gatherings/${result.id}`)
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to create gathering'
-    return { errors: { form: message } }
+    return { errors: parseGatheringErrors(error) }
   }
 }
 

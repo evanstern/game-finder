@@ -223,8 +223,11 @@ export const gatheringRouter = createRouter({
       const row = await ctx.db
         .selectFrom('gathering')
         .innerJoin('users', 'users.id', 'gathering.host_id')
+        .leftJoin('zip_code_location as z', 'z.zip_code', 'gathering.zip_code')
         .selectAll('gathering')
         .select('users.display_name as host_display_name')
+        .select('z.city as location_city')
+        .select('z.state as location_state')
         .where('gathering.id', '=', input.id)
         .executeTakeFirst()
 
@@ -252,12 +255,17 @@ export const gatheringRouter = createRouter({
         currentUserStatus = participant?.status ?? null
       }
 
+      const locationLabel = row.location_city && row.location_state
+        ? `${row.location_city}, ${row.location_state}`
+        : row.zip_code
+
       return {
         ...serializeGathering(row),
         host: { displayName: row.host_display_name },
         games,
         participantCount: Number(countResult.count),
         currentUserStatus,
+        locationLabel,
         // Only expose joinCode to the host
         joinCode: ctx.userId === row.host_id ? row.join_code : null,
       }
