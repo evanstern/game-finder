@@ -1,11 +1,10 @@
 import { hashPassword } from '../src/auth/password.js'
 import { createSession } from '../src/auth/session.js'
 import { db } from '../src/db.js'
-import { redis } from '../src/redis.js'
 import { createContext } from '../src/trpc/context.js'
 import { appRouter } from '../src/trpc/router.js'
 
-export { db, redis }
+export { db }
 
 export async function createTestCaller(cookie?: string) {
   const req = new Request('http://test.com', {
@@ -39,7 +38,7 @@ export async function createTestUser(overrides?: {
 }
 
 export async function createAuthenticatedCaller(userId: string) {
-  const sessionId = await createSession(redis, userId)
+  const sessionId = await createSession(db, userId)
   return createTestCaller(`session_id=${sessionId}`)
 }
 
@@ -165,10 +164,10 @@ export async function createTestGathering(
 
 export async function cleanup() {
   await db.deleteFrom('gathering_game').execute()
+  await db.deleteFrom('gathering_participant').execute()
+  await db.deleteFrom('session').execute()
   await db.deleteFrom('gathering').execute()
   await db.deleteFrom('game').execute()
   await db.deleteFrom('users').execute()
   await db.deleteFrom('zip_code_location').execute()
-  const keys = await redis.keys('session:*')
-  if (keys.length > 0) await redis.del(...keys)
 }

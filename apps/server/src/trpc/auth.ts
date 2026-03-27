@@ -31,17 +31,24 @@ export const authRouter = createRouter({
 
       const passwordHash = await hashPassword(input.password)
 
-      const user = await ctx.db
-        .insertInto('users')
-        .values({
-          email: input.email,
-          password_hash: passwordHash,
-          display_name: input.displayName,
-        })
-        .returningAll()
-        .executeTakeFirstOrThrow()
+      const { user, sessionId } = await ctx.db
+        .transaction()
+        .execute(async (trx) => {
+          const user = await trx
+            .insertInto('users')
+            .values({
+              email: input.email,
+              password_hash: passwordHash,
+              display_name: input.displayName,
+            })
+            .returningAll()
+            .executeTakeFirstOrThrow()
 
-      const sessionId = await createSession(ctx.db, user.id)
+          const sessionId = await createSession(trx, user.id)
+
+          return { user, sessionId }
+        })
+
       ctx.resHeaders.append('set-cookie', serializeSessionCookie(sessionId))
 
       return { user: serializeUser(user) }
