@@ -11,3 +11,4 @@ build/
 .playwright-mcp/
 .vite/
 *.png
+cloud-sql-proxy
