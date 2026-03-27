@@ -174,9 +174,18 @@ describe('gathering.search', () => {
     const games = await seedGames()
 
     // Create 3 gatherings
-    await createTestGathering(user.id, [games[0].id], { title: 'G1', zipCode: '10001' })
-    await createTestGathering(user.id, [games[0].id], { title: 'G2', zipCode: '10001' })
-    await createTestGathering(user.id, [games[0].id], { title: 'G3', zipCode: '10002' })
+    await createTestGathering(user.id, [games[0].id], {
+      title: 'G1',
+      zipCode: '10001',
+    })
+    await createTestGathering(user.id, [games[0].id], {
+      title: 'G2',
+      zipCode: '10001',
+    })
+    await createTestGathering(user.id, [games[0].id], {
+      title: 'G3',
+      zipCode: '10002',
+    })
 
     const page1 = await caller.gathering.search({
       zipCode: '10001',

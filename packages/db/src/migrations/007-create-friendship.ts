@@ -1,7 +1,9 @@
 import { type Kysely, sql } from 'kysely'
 
 export async function up(db: Kysely<unknown>): Promise<void> {
-  await sql`CREATE TYPE friendship_status AS ENUM ('pending', 'accepted', 'declined')`.execute(db)
+  await sql`CREATE TYPE friendship_status AS ENUM ('pending', 'accepted', 'declined')`.execute(
+    db,
+  )
 
   await db.schema
     .createTable('friendship')

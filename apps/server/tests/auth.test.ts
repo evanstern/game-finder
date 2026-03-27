@@ -151,8 +151,8 @@ describe('auth.me', () => {
     const result = await caller.auth.me()
 
     expect(result).not.toBeNull()
-    expect(result!.email).toBe('me@example.com')
-    expect(result!.displayName).toBe('Me User')
+    expect(result?.email).toBe('me@example.com')
+    expect(result?.displayName).toBe('Me User')
   })
 
   it('returns null when not authenticated', async () => {

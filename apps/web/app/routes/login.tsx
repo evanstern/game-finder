@@ -87,11 +87,16 @@ export default function LogIn({ actionData }: Route.ComponentProps) {
           <CardContent className="space-y-5">
             {errors.form && (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2.5">
-                <p className="text-sm text-destructive-foreground">{errors.form}</p>
+                <p className="text-sm text-destructive-foreground">
+                  {errors.form}
+                </p>
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+              <Label
+                htmlFor="email"
+                className="text-xs font-medium tracking-wide text-muted-foreground uppercase"
+              >
                 Email
               </Label>
               <Input
@@ -106,7 +111,10 @@ export default function LogIn({ actionData }: Route.ComponentProps) {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+              <Label
+                htmlFor="password"
+                className="text-xs font-medium tracking-wide text-muted-foreground uppercase"
+              >
                 Password
               </Label>
               <Input
@@ -122,11 +130,7 @@ export default function LogIn({ actionData }: Route.ComponentProps) {
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isPending}
-            >
+            <Button type="submit" className="w-full" disabled={isPending}>
               {isPending ? 'Logging in...' : 'Log In'}
             </Button>
             <p className="text-sm text-muted-foreground">

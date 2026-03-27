@@ -1,9 +1,9 @@
 import { createReadStream } from 'node:fs'
-import { createInterface } from 'node:readline'
 import { resolve } from 'node:path'
+import { createInterface } from 'node:readline'
 import type { Kysely } from 'kysely'
-import type { Database } from './types.js'
 import { createDb } from './client.js'
+import type { Database } from './types.js'
 
 const CSV_PATH = resolve(import.meta.dirname, '../data/us-zip-codes.csv')
 

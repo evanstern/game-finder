@@ -45,10 +45,26 @@ function computeNextMonthly(startsAt: Date, endDate: Date | null): Date | null {
   const hours = startsAt.getHours()
   const minutes = startsAt.getMinutes()
 
-  let candidate = new Date(now.getFullYear(), now.getMonth(), dayOfMonth, hours, minutes, 0, 0)
+  let candidate = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    dayOfMonth,
+    hours,
+    minutes,
+    0,
+    0,
+  )
 
   if (candidate.getTime() <= now.getTime()) {
-    candidate = new Date(now.getFullYear(), now.getMonth() + 1, dayOfMonth, hours, minutes, 0, 0)
+    candidate = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      dayOfMonth,
+      hours,
+      minutes,
+      0,
+      0,
+    )
   }
 
   return checkEndDate(candidate, endDate)

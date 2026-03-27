@@ -1,8 +1,12 @@
 import { type Kysely, sql } from 'kysely'
 
 export async function up(db: Kysely<unknown>): Promise<void> {
-  await sql`CREATE TYPE gathering_visibility AS ENUM ('public', 'private')`.execute(db)
-  await sql`CREATE TYPE participant_status AS ENUM ('joined', 'waitlisted')`.execute(db)
+  await sql`CREATE TYPE gathering_visibility AS ENUM ('public', 'private')`.execute(
+    db,
+  )
+  await sql`CREATE TYPE participant_status AS ENUM ('joined', 'waitlisted')`.execute(
+    db,
+  )
 
   await db.schema
     .createTable('gathering_participant')
@@ -12,9 +16,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .addColumn('gathering_id', 'uuid', (col) =>
       col.notNull().references('gathering.id').onDelete('cascade'),
     )
-    .addColumn('user_id', 'uuid', (col) =>
-      col.notNull().references('users.id'),
-    )
+    .addColumn('user_id', 'uuid', (col) => col.notNull().references('users.id'))
     .addColumn('status', sql`participant_status`, (col) => col.notNull())
     .addColumn('created_at', 'timestamptz', (col) =>
       col.notNull().defaultTo(sql`now()`),

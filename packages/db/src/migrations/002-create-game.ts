@@ -1,7 +1,9 @@
 import { type Kysely, sql } from 'kysely'
 
 export async function up(db: Kysely<unknown>): Promise<void> {
-  await sql`CREATE TYPE game_type AS ENUM ('board_game', 'ttrpg', 'card_game')`.execute(db)
+  await sql`CREATE TYPE game_type AS ENUM ('board_game', 'ttrpg', 'card_game')`.execute(
+    db,
+  )
 
   await db.schema
     .createTable('game')
@@ -22,7 +24,11 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     )
     .execute()
 
-  await db.schema.createIndex('idx_game_type').on('game').column('type').execute()
+  await db.schema
+    .createIndex('idx_game_type')
+    .on('game')
+    .column('type')
+    .execute()
 }
 
 export async function down(db: Kysely<unknown>): Promise<void> {

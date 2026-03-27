@@ -1,5 +1,11 @@
 import type { Selectable } from 'kysely'
-import type { UsersTable, GameTable, GatheringTable, GatheringParticipantTable, FriendshipTable } from './types.js'
+import type {
+  FriendshipTable,
+  GameTable,
+  GatheringParticipantTable,
+  GatheringTable,
+  UsersTable,
+} from './types.js'
 
 export function serializeUser(row: Selectable<UsersTable>) {
   return {

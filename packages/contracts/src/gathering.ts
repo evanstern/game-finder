@@ -1,6 +1,11 @@
 import { z } from 'zod'
 
-export const scheduleTypeSchema = z.enum(['once', 'weekly', 'biweekly', 'monthly'])
+export const scheduleTypeSchema = z.enum([
+  'once',
+  'weekly',
+  'biweekly',
+  'monthly',
+])
 
 export const gatheringStatusSchema = z.enum(['active', 'closed'])
 

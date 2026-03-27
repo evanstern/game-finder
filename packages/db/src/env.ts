@@ -15,4 +15,3 @@ export function getDbConfig() {
     password: requireEnv('DB_PASSWORD'),
   }
 }
-

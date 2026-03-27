@@ -1,9 +1,9 @@
-import { TRPCError } from '@trpc/server'
 import {
   loginInputSchema,
   registerInputSchema,
 } from '@game-finder/contracts/auth'
 import { serializeUser } from '@game-finder/db/serializers'
+import { TRPCError } from '@trpc/server'
 import {
   serializeClearSessionCookie,
   serializeSessionCookie,

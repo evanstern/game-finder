@@ -8,7 +8,10 @@ interface NavUser {
   displayName: string
 }
 
-export function Nav({ user, friendRequestCount = 0 }: { user: NavUser | null; friendRequestCount?: number }) {
+export function Nav({
+  user,
+  friendRequestCount = 0,
+}: { user: NavUser | null; friendRequestCount?: number }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const fetcher = useFetcher()
   const isLoggingOut = fetcher.state !== 'idle'
@@ -30,10 +33,16 @@ export function Nav({ user, friendRequestCount = 0 }: { user: NavUser | null; fr
           {mobileMenuOpen ? '✕' : '☰'}
         </Button>
         <div className="hidden md:flex items-center gap-5">
-          <Link to="/search" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+          <Link
+            to="/search"
+            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
             Find Games
           </Link>
-          <Link to="/gatherings/new" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+          <Link
+            to="/gatherings/new"
+            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
             Post a Game
           </Link>
           {user ? (
@@ -78,10 +87,7 @@ export function Nav({ user, friendRequestCount = 0 }: { user: NavUser | null; fr
               >
                 Log In
               </Link>
-              <Link
-                to="/signup"
-                className="text-sm font-semibold text-primary"
-              >
+              <Link to="/signup" className="text-sm font-semibold text-primary">
                 Sign Up
               </Link>
             </>
@@ -90,13 +96,32 @@ export function Nav({ user, friendRequestCount = 0 }: { user: NavUser | null; fr
       </div>
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-border bg-card/95 backdrop-blur-md px-6 py-4 flex flex-col gap-3">
-          <Link to="/search" className="text-sm text-muted-foreground" onClick={() => setMobileMenuOpen(false)}>Find Games</Link>
-          <Link to="/gatherings/new" className="text-sm text-muted-foreground" onClick={() => setMobileMenuOpen(false)}>Post a Game</Link>
+          <Link
+            to="/search"
+            className="text-sm text-muted-foreground"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            Find Games
+          </Link>
+          <Link
+            to="/gatherings/new"
+            className="text-sm text-muted-foreground"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            Post a Game
+          </Link>
           {user ? (
             <>
-              <span className="text-sm font-medium text-primary">{user.displayName}</span>
-              <Link to="/friends" className="text-sm text-muted-foreground" onClick={() => setMobileMenuOpen(false)}>
-                Friends{friendRequestCount > 0 ? ` (${friendRequestCount})` : ''}
+              <span className="text-sm font-medium text-primary">
+                {user.displayName}
+              </span>
+              <Link
+                to="/friends"
+                className="text-sm text-muted-foreground"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Friends
+                {friendRequestCount > 0 ? ` (${friendRequestCount})` : ''}
               </Link>
               <fetcher.Form method="post" action="/logout">
                 <Button
@@ -113,8 +138,20 @@ export function Nav({ user, friendRequestCount = 0 }: { user: NavUser | null; fr
             </>
           ) : (
             <>
-              <Link to="/login" className="text-sm text-muted-foreground" onClick={() => setMobileMenuOpen(false)}>Log In</Link>
-              <Link to="/signup" className="text-sm text-primary font-semibold" onClick={() => setMobileMenuOpen(false)}>Sign Up</Link>
+              <Link
+                to="/login"
+                className="text-sm text-muted-foreground"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Log In
+              </Link>
+              <Link
+                to="/signup"
+                className="text-sm text-primary font-semibold"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Sign Up
+              </Link>
             </>
           )}
         </div>

@@ -1,4 +1,4 @@
-import { type Kysely } from 'kysely'
+import type { Kysely } from 'kysely'
 
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema
@@ -6,9 +6,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .addColumn('gathering_id', 'uuid', (col) =>
       col.notNull().references('gathering.id').onDelete('cascade'),
     )
-    .addColumn('game_id', 'uuid', (col) =>
-      col.notNull().references('game.id'),
-    )
+    .addColumn('game_id', 'uuid', (col) => col.notNull().references('game.id'))
     .addPrimaryKeyConstraint('pk_gathering_game', ['gathering_id', 'game_id'])
     .execute()
 }

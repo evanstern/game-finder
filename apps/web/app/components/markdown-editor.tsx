@@ -1,8 +1,8 @@
+import { defaultKeymap } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
 import { EditorState } from '@codemirror/state'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { EditorView, keymap, lineNumbers } from '@codemirror/view'
-import { defaultKeymap } from '@codemirror/commands'
 import { Button } from '@game-finder/ui/components/button'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Markdown from 'react-markdown'
@@ -13,11 +13,17 @@ interface MarkdownEditorProps {
   placeholder?: string
 }
 
-export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorProps) {
+export function MarkdownEditor({
+  value,
+  onChange,
+  placeholder,
+}: MarkdownEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const [vimEnabled, setVimEnabled] = useState(false)
-  const [vimModule, setVimModule] = useState<typeof import('@replit/codemirror-vim') | null>(null)
+  const [vimModule, setVimModule] = useState<
+    typeof import('@replit/codemirror-vim') | null
+  >(null)
   const [activeTab, setActiveTab] = useState<'editor' | 'preview'>('editor')
 
   useEffect(() => {
@@ -52,7 +58,9 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
     }
 
     if (placeholder) {
-      extensions.push(EditorView.contentAttributes.of({ 'aria-placeholder': placeholder }))
+      extensions.push(
+        EditorView.contentAttributes.of({ 'aria-placeholder': placeholder }),
+      )
     }
 
     const state = EditorState.create({
@@ -64,7 +72,7 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
       state,
       parent: editorRef.current,
     })
-  }, [vimEnabled, vimModule, placeholder])
+  }, [vimEnabled, vimModule, placeholder, onChange, value])
 
   useEffect(() => {
     createEditor()
@@ -138,7 +146,9 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
             {value ? (
               <Markdown>{value}</Markdown>
             ) : (
-              <p className="text-sm text-muted-foreground italic">Preview will appear here...</p>
+              <p className="text-sm text-muted-foreground italic">
+                Preview will appear here...
+              </p>
             )}
           </div>
         )}

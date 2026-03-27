@@ -74,9 +74,7 @@ function SearchCard() {
         </Button>
       </div>
 
-      {zipError && (
-        <p className="text-sm text-destructive mb-2">{zipError}</p>
-      )}
+      {zipError && <p className="text-sm text-destructive mb-2">{zipError}</p>}
       <div className="flex flex-wrap gap-1.5">
         {POPULAR_TAGS.map((tag) => (
           <Badge
@@ -94,7 +92,9 @@ function SearchCard() {
 }
 
 export default function Home() {
-  const rootData = useRouteLoaderData('root') as { user: { displayName: string } | null }
+  const rootData = useRouteLoaderData('root') as {
+    user: { displayName: string } | null
+  }
   const user = rootData?.user
   const [searchParams] = useSearchParams()
   const isNewUser = searchParams.get('welcome') === 'new'
@@ -146,11 +146,17 @@ export default function Home() {
                   <div className="w-10 h-10 mx-auto mb-2 rounded-full border border-[rgba(255,191,71,0.2)] bg-[rgba(255,191,71,0.1)] flex items-center justify-center text-base">
                     {step.icon}
                   </div>
-                  <div className="text-foreground text-sm font-semibold mb-0.5">{step.label}</div>
-                  <div className="text-[rgba(255,255,255,0.35)] text-xs leading-snug">{step.desc}</div>
+                  <div className="text-foreground text-sm font-semibold mb-0.5">
+                    {step.label}
+                  </div>
+                  <div className="text-[rgba(255,255,255,0.35)] text-xs leading-snug">
+                    {step.desc}
+                  </div>
                 </div>
                 {i < HOW_IT_WORKS.length - 1 && (
-                  <div className="hidden md:block text-[rgba(255,191,71,0.25)] pb-5">→</div>
+                  <div className="hidden md:block text-[rgba(255,191,71,0.25)] pb-5">
+                    →
+                  </div>
                 )}
               </Fragment>
             ))}
@@ -158,11 +164,19 @@ export default function Home() {
         </div>
 
         <div className="border-t border-[rgba(255,191,71,0.06)] px-6 py-3.5 flex justify-between items-center">
-          <span className="text-[rgba(255,255,255,0.2)] text-[11px]">© 2026 gamefinder</span>
+          <span className="text-[rgba(255,255,255,0.2)] text-[11px]">
+            © 2026 gamefinder
+          </span>
           <div className="flex gap-3.5">
-            <a href="#" className="text-[rgba(255,255,255,0.2)] text-[11px] hover:text-[rgba(255,255,255,0.4)]">About</a>
-            <a href="#" className="text-[rgba(255,255,255,0.2)] text-[11px] hover:text-[rgba(255,255,255,0.4)]">Privacy</a>
-            <a href="#" className="text-[rgba(255,255,255,0.2)] text-[11px] hover:text-[rgba(255,255,255,0.4)]">Contact</a>
+            <span className="text-[rgba(255,255,255,0.2)] text-[11px] hover:text-[rgba(255,255,255,0.4)] cursor-pointer">
+              About
+            </span>
+            <span className="text-[rgba(255,255,255,0.2)] text-[11px] hover:text-[rgba(255,255,255,0.4)] cursor-pointer">
+              Privacy
+            </span>
+            <span className="text-[rgba(255,255,255,0.2)] text-[11px] hover:text-[rgba(255,255,255,0.4)] cursor-pointer">
+              Contact
+            </span>
           </div>
         </div>
       </div>

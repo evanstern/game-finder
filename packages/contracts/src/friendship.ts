@@ -1,7 +1,11 @@
 import { z } from 'zod'
 import { gatheringSchema } from './gathering.js'
 
-export const friendshipStatusSchema = z.enum(['pending', 'accepted', 'declined'])
+export const friendshipStatusSchema = z.enum([
+  'pending',
+  'accepted',
+  'declined',
+])
 
 export const sendFriendRequestSchema = z.object({
   userId: z.string().uuid(),
@@ -41,11 +45,13 @@ export const friendActivityInputSchema = z.object({
 })
 
 export const friendActivityGatheringSchema = gatheringSchema.extend({
-  friends: z.array(z.object({
-    friendId: z.string().uuid(),
-    displayName: z.string(),
-    role: z.enum(['host', 'participant']),
-  })),
+  friends: z.array(
+    z.object({
+      friendId: z.string().uuid(),
+      displayName: z.string(),
+      role: z.enum(['host', 'participant']),
+    }),
+  ),
 })
 
 export const friendActivityOutputSchema = z.object({

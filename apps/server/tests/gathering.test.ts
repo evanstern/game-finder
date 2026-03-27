@@ -44,9 +44,7 @@ describe('gathering.create', () => {
         ...VALID_GATHERING_INPUT,
         gameIds: [games[0].id],
       }),
-    ).rejects.toThrow(
-      expect.objectContaining({ code: 'UNAUTHORIZED' }),
-    )
+    ).rejects.toThrow(expect.objectContaining({ code: 'UNAUTHORIZED' }))
   })
 
   it('rejects invalid game IDs', async () => {
@@ -58,9 +56,7 @@ describe('gathering.create', () => {
         ...VALID_GATHERING_INPUT,
         gameIds: ['00000000-0000-0000-0000-000000000000'],
       }),
-    ).rejects.toThrow(
-      expect.objectContaining({ code: 'BAD_REQUEST' }),
-    )
+    ).rejects.toThrow(expect.objectContaining({ code: 'BAD_REQUEST' }))
   })
 })
 
@@ -99,9 +95,7 @@ describe('gathering.update', () => {
     const { caller: otherCaller } = await createAuthenticatedCaller(other.id)
     await expect(
       otherCaller.gathering.update({ id: created.id, title: 'Hijacked' }),
-    ).rejects.toThrow(
-      expect.objectContaining({ code: 'FORBIDDEN' }),
-    )
+    ).rejects.toThrow(expect.objectContaining({ code: 'FORBIDDEN' }))
   })
 })
 
@@ -119,9 +113,7 @@ describe('gathering.delete', () => {
     const result = await caller.gathering.delete({ id: created.id })
     expect(result.success).toBe(true)
 
-    await expect(
-      caller.gathering.getById({ id: created.id }),
-    ).rejects.toThrow(
+    await expect(caller.gathering.getById({ id: created.id })).rejects.toThrow(
       expect.objectContaining({ code: 'NOT_FOUND' }),
     )
   })
@@ -140,9 +132,7 @@ describe('gathering.delete', () => {
     const { caller: otherCaller } = await createAuthenticatedCaller(other.id)
     await expect(
       otherCaller.gathering.delete({ id: created.id }),
-    ).rejects.toThrow(
-      expect.objectContaining({ code: 'FORBIDDEN' }),
-    )
+    ).rejects.toThrow(expect.objectContaining({ code: 'FORBIDDEN' }))
   })
 })
 
@@ -185,9 +175,7 @@ describe('gathering.getById', () => {
     const { caller } = await createTestCaller()
     await expect(
       caller.gathering.getById({ id: '00000000-0000-0000-0000-000000000000' }),
-    ).rejects.toThrow(
-      expect.objectContaining({ code: 'NOT_FOUND' }),
-    )
+    ).rejects.toThrow(expect.objectContaining({ code: 'NOT_FOUND' }))
   })
 })
 
@@ -198,11 +186,22 @@ describe('gathering.listByHost', () => {
     const games = await seedGames()
 
     const { caller: caller1 } = await createAuthenticatedCaller(user1.id)
-    await caller1.gathering.create({ ...VALID_GATHERING_INPUT, gameIds: [games[0].id] })
-    await caller1.gathering.create({ ...VALID_GATHERING_INPUT, title: 'Second', gameIds: [games[1].id] })
+    await caller1.gathering.create({
+      ...VALID_GATHERING_INPUT,
+      gameIds: [games[0].id],
+    })
+    await caller1.gathering.create({
+      ...VALID_GATHERING_INPUT,
+      title: 'Second',
+      gameIds: [games[1].id],
+    })
 
     const { caller: caller2 } = await createAuthenticatedCaller(user2.id)
-    await caller2.gathering.create({ ...VALID_GATHERING_INPUT, title: 'Other Host', gameIds: [games[0].id] })
+    await caller2.gathering.create({
+      ...VALID_GATHERING_INPUT,
+      title: 'Other Host',
+      gameIds: [games[0].id],
+    })
 
     const list = await caller1.gathering.listByHost()
     expect(list).toHaveLength(2)

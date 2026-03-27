@@ -35,8 +35,6 @@ describe('game.getById', () => {
     const { caller } = await createTestCaller()
     await expect(
       caller.game.getById({ id: '00000000-0000-0000-0000-000000000000' }),
-    ).rejects.toThrow(
-      expect.objectContaining({ code: 'NOT_FOUND' }),
-    )
+    ).rejects.toThrow(expect.objectContaining({ code: 'NOT_FOUND' }))
   })
 })

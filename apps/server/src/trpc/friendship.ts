@@ -1,10 +1,10 @@
-import { TRPCError } from '@trpc/server'
-import { sql } from '@game-finder/db'
 import {
-  sendFriendRequestSchema,
   friendshipActionSchema,
+  sendFriendRequestSchema,
 } from '@game-finder/contracts/friendship'
+import { sql } from '@game-finder/db'
 import { serializeFriendship } from '@game-finder/db/serializers'
+import { TRPCError } from '@trpc/server'
 import { createRouter, protectedProcedure } from './init.js'
 
 export const friendshipRouter = createRouter({
@@ -12,7 +12,10 @@ export const friendshipRouter = createRouter({
     .input(sendFriendRequestSchema)
     .mutation(async ({ input, ctx }) => {
       if (input.userId === ctx.userId) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Cannot send a friend request to yourself' })
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Cannot send a friend request to yourself',
+        })
       }
 
       // Check for existing row in either direction (any status)
@@ -35,10 +38,16 @@ export const friendshipRouter = createRouter({
 
       if (existing) {
         if (existing.status === 'pending' || existing.status === 'accepted') {
-          throw new TRPCError({ code: 'CONFLICT', message: 'A friendship already exists between these users' })
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'A friendship already exists between these users',
+          })
         }
         // Declined row exists — clean it up so a fresh request can be created
-        await ctx.db.deleteFrom('friendship').where('id', '=', existing.id).execute()
+        await ctx.db
+          .deleteFrom('friendship')
+          .where('id', '=', existing.id)
+          .execute()
       }
 
       // Validate target user exists
@@ -62,7 +71,8 @@ export const friendshipRouter = createRouter({
             eb.and([
               eb('gathering.host_id', '=', ctx.userId),
               eb.exists(
-                eb.selectFrom('gathering_participant')
+                eb
+                  .selectFrom('gathering_participant')
                   .select(sql.lit(1).as('one'))
                   .where('user_id', '=', input.userId)
                   .whereRef('gathering_id', '=', 'gathering.id'),
@@ -72,7 +82,8 @@ export const friendshipRouter = createRouter({
             eb.and([
               eb('gathering.host_id', '=', input.userId),
               eb.exists(
-                eb.selectFrom('gathering_participant')
+                eb
+                  .selectFrom('gathering_participant')
                   .select(sql.lit(1).as('one'))
                   .where('user_id', '=', ctx.userId)
                   .whereRef('gathering_id', '=', 'gathering.id'),
@@ -81,13 +92,15 @@ export const friendshipRouter = createRouter({
             // Both are participants in the same gathering
             eb.and([
               eb.exists(
-                eb.selectFrom('gathering_participant')
+                eb
+                  .selectFrom('gathering_participant')
                   .select(sql.lit(1).as('one'))
                   .where('user_id', '=', ctx.userId)
                   .whereRef('gathering_id', '=', 'gathering.id'),
               ),
               eb.exists(
-                eb.selectFrom('gathering_participant')
+                eb
+                  .selectFrom('gathering_participant')
                   .select(sql.lit(1).as('one'))
                   .where('user_id', '=', input.userId)
                   .whereRef('gathering_id', '=', 'gathering.id'),
@@ -99,7 +112,11 @@ export const friendshipRouter = createRouter({
         .executeTakeFirst()
 
       if (!sharedGathering) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'You can only send friend requests to people you share a gathering with' })
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message:
+            'You can only send friend requests to people you share a gathering with',
+        })
       }
 
       const friendship = await ctx.db
@@ -124,11 +141,17 @@ export const friendshipRouter = createRouter({
         .executeTakeFirst()
 
       if (!friendship || friendship.status !== 'pending') {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Pending friend request not found' })
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Pending friend request not found',
+        })
       }
 
       if (friendship.addressee_id !== ctx.userId) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Only the addressee can accept a friend request' })
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only the addressee can accept a friend request',
+        })
       }
 
       const updated = await ctx.db
@@ -151,11 +174,17 @@ export const friendshipRouter = createRouter({
         .executeTakeFirst()
 
       if (!friendship || friendship.status !== 'pending') {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Pending friend request not found' })
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Pending friend request not found',
+        })
       }
 
       if (friendship.addressee_id !== ctx.userId) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Only the addressee can decline a friend request' })
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only the addressee can decline a friend request',
+        })
       }
 
       const updated = await ctx.db
@@ -178,11 +207,20 @@ export const friendshipRouter = createRouter({
         .executeTakeFirst()
 
       if (!friendship) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Friendship not found' })
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Friendship not found',
+        })
       }
 
-      if (friendship.requester_id !== ctx.userId && friendship.addressee_id !== ctx.userId) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'You are not part of this friendship' })
+      if (
+        friendship.requester_id !== ctx.userId &&
+        friendship.addressee_id !== ctx.userId
+      ) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'You are not part of this friendship',
+        })
       }
 
       await ctx.db
@@ -193,73 +231,80 @@ export const friendshipRouter = createRouter({
       return { success: true }
     }),
 
-  listFriends: protectedProcedure
-    .query(async ({ ctx }) => {
-      const rows = await ctx.db
-        .selectFrom('friendship')
-        .innerJoin('users as requester', 'requester.id', 'friendship.requester_id')
-        .innerJoin('users as addressee', 'addressee.id', 'friendship.addressee_id')
-        .select([
-          'friendship.id as friendship_id',
-          'friendship.requester_id',
-          'friendship.addressee_id',
-          'friendship.created_at',
-          'requester.display_name as requester_display_name',
-          'addressee.display_name as addressee_display_name',
-        ])
-        .where('friendship.status', '=', 'accepted')
-        .where((eb) =>
-          eb.or([
-            eb('friendship.requester_id', '=', ctx.userId),
-            eb('friendship.addressee_id', '=', ctx.userId),
-          ]),
-        )
-        .execute()
+  listFriends: protectedProcedure.query(async ({ ctx }) => {
+    const rows = await ctx.db
+      .selectFrom('friendship')
+      .innerJoin(
+        'users as requester',
+        'requester.id',
+        'friendship.requester_id',
+      )
+      .innerJoin(
+        'users as addressee',
+        'addressee.id',
+        'friendship.addressee_id',
+      )
+      .select([
+        'friendship.id as friendship_id',
+        'friendship.requester_id',
+        'friendship.addressee_id',
+        'friendship.created_at',
+        'requester.display_name as requester_display_name',
+        'addressee.display_name as addressee_display_name',
+      ])
+      .where('friendship.status', '=', 'accepted')
+      .where((eb) =>
+        eb.or([
+          eb('friendship.requester_id', '=', ctx.userId),
+          eb('friendship.addressee_id', '=', ctx.userId),
+        ]),
+      )
+      .execute()
 
-      return rows.map((row) => {
-        const iAmRequester = row.requester_id === ctx.userId
-        return {
-          friendshipId: row.friendship_id,
-          friendId: iAmRequester ? row.addressee_id : row.requester_id,
-          displayName: iAmRequester ? row.addressee_display_name : row.requester_display_name,
-          createdAt: row.created_at,
-        }
-      })
-    }),
+    return rows.map((row) => {
+      const iAmRequester = row.requester_id === ctx.userId
+      return {
+        friendshipId: row.friendship_id,
+        friendId: iAmRequester ? row.addressee_id : row.requester_id,
+        displayName: iAmRequester
+          ? row.addressee_display_name
+          : row.requester_display_name,
+        createdAt: row.created_at,
+      }
+    })
+  }),
 
-  listIncomingRequests: protectedProcedure
-    .query(async ({ ctx }) => {
-      const rows = await ctx.db
-        .selectFrom('friendship')
-        .innerJoin('users', 'users.id', 'friendship.requester_id')
-        .selectAll('friendship')
-        .select('users.display_name as requester_display_name')
-        .where('friendship.addressee_id', '=', ctx.userId)
-        .where('friendship.status', '=', 'pending')
-        .orderBy('friendship.created_at', 'desc')
-        .execute()
+  listIncomingRequests: protectedProcedure.query(async ({ ctx }) => {
+    const rows = await ctx.db
+      .selectFrom('friendship')
+      .innerJoin('users', 'users.id', 'friendship.requester_id')
+      .selectAll('friendship')
+      .select('users.display_name as requester_display_name')
+      .where('friendship.addressee_id', '=', ctx.userId)
+      .where('friendship.status', '=', 'pending')
+      .orderBy('friendship.created_at', 'desc')
+      .execute()
 
-      return rows.map((row) => ({
-        ...serializeFriendship(row),
-        requesterDisplayName: row.requester_display_name,
-      }))
-    }),
+    return rows.map((row) => ({
+      ...serializeFriendship(row),
+      requesterDisplayName: row.requester_display_name,
+    }))
+  }),
 
-  listOutgoingRequests: protectedProcedure
-    .query(async ({ ctx }) => {
-      const rows = await ctx.db
-        .selectFrom('friendship')
-        .innerJoin('users', 'users.id', 'friendship.addressee_id')
-        .selectAll('friendship')
-        .select('users.display_name as addressee_display_name')
-        .where('friendship.requester_id', '=', ctx.userId)
-        .where('friendship.status', '=', 'pending')
-        .orderBy('friendship.created_at', 'desc')
-        .execute()
+  listOutgoingRequests: protectedProcedure.query(async ({ ctx }) => {
+    const rows = await ctx.db
+      .selectFrom('friendship')
+      .innerJoin('users', 'users.id', 'friendship.addressee_id')
+      .selectAll('friendship')
+      .select('users.display_name as addressee_display_name')
+      .where('friendship.requester_id', '=', ctx.userId)
+      .where('friendship.status', '=', 'pending')
+      .orderBy('friendship.created_at', 'desc')
+      .execute()
 
-      return rows.map((row) => ({
-        ...serializeFriendship(row),
-        addresseeDisplayName: row.addressee_display_name,
-      }))
-    }),
+    return rows.map((row) => ({
+      ...serializeFriendship(row),
+      addresseeDisplayName: row.addressee_display_name,
+    }))
+  }),
 })

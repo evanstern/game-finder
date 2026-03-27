@@ -46,4 +46,6 @@ export const searchGatheringsOutputSchema = z.object({
 
 export type SearchGatheringsInput = z.infer<typeof searchGatheringsSchema>
 export type SearchResult = z.infer<typeof searchResultSchema>
-export type SearchGatheringsOutput = z.infer<typeof searchGatheringsOutputSchema>
+export type SearchGatheringsOutput = z.infer<
+  typeof searchGatheringsOutputSchema
+>

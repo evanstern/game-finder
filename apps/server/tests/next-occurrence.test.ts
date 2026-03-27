@@ -18,24 +18,24 @@ describe('computeNextOccurrence', () => {
     const past = new Date('2025-01-06T19:00:00Z') // a Monday
     const result = computeNextOccurrence('weekly', past, null)
     expect(result).not.toBeNull()
-    expect(result!.getDay()).toBe(1) // Monday
-    expect(result!.getTime()).toBeGreaterThan(Date.now())
+    expect(result?.getDay()).toBe(1) // Monday
+    expect(result?.getTime()).toBeGreaterThan(Date.now())
   })
 
   it('returns correct biweekly occurrence', () => {
     const past = new Date('2025-01-06T19:00:00Z') // a Monday
     const result = computeNextOccurrence('biweekly', past, null)
     expect(result).not.toBeNull()
-    expect(result!.getDay()).toBe(1) // Monday
-    expect(result!.getTime()).toBeGreaterThan(Date.now())
+    expect(result?.getDay()).toBe(1) // Monday
+    expect(result?.getTime()).toBeGreaterThan(Date.now())
   })
 
   it('returns next matching day-of-month for monthly', () => {
     const past = new Date('2025-01-15T19:00:00Z') // 15th
     const result = computeNextOccurrence('monthly', past, null)
     expect(result).not.toBeNull()
-    expect(result!.getDate()).toBe(15)
-    expect(result!.getTime()).toBeGreaterThan(Date.now())
+    expect(result?.getDate()).toBe(15)
+    expect(result?.getTime()).toBeGreaterThan(Date.now())
   })
 
   it('returns null when recurring series is past end_date', () => {

@@ -32,7 +32,8 @@ interface ZodIssue {
 }
 
 export function parseGatheringErrors(error: unknown): Record<string, string> {
-  const message = error instanceof Error ? error.message : 'Something went wrong'
+  const message =
+    error instanceof Error ? error.message : 'Something went wrong'
 
   try {
     const issues: ZodIssue[] = JSON.parse(message)
@@ -48,7 +49,8 @@ export function parseGatheringErrors(error: unknown): Record<string, string> {
       const fieldMessages = FIELD_MESSAGES[field]
       if (fieldMessages) {
         const codeKey = issue.code ?? ''
-        errors[field] = fieldMessages[codeKey] || fieldMessages['default'] || 'Invalid value'
+        errors[field] =
+          fieldMessages[codeKey] || fieldMessages.default || 'Invalid value'
       } else {
         errors[field] = issue.message ?? 'Invalid value'
       }

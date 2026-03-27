@@ -1,6 +1,6 @@
-import { TRPCError } from '@trpc/server'
 import { gameTypeSchema } from '@game-finder/contracts/game'
 import { serializeGame } from '@game-finder/db/serializers'
+import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
 import { createRouter, publicProcedure } from './init.js'
 

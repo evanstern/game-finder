@@ -9,5 +9,10 @@
     "declaration": false,
     "declarationMap": false
   },
-  "include": [".react-router/types/**/*", "app", "vite.config.ts", "react-router.config.ts"]
+  "include": [
+    ".react-router/types/**/*",
+    "app",
+    "vite.config.ts",
+    "react-router.config.ts"
+  ]
 }

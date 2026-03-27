@@ -2,8 +2,8 @@ import { redirect, useNavigation } from 'react-router'
 import { toDateInput, toDatetimeLocal } from '../components/client-date.js'
 import { GatheringForm } from '../components/gathering-form.js'
 import { MapBackground } from '../components/map-background.js'
-import { parseGatheringErrors } from '../utils/parse-gathering-errors.js'
 import { createServerTRPC } from '../trpc/server.js'
+import { parseGatheringErrors } from '../utils/parse-gathering-errors.js'
 import type { Route } from './+types/gatherings.$id.edit.js'
 
 export async function loader({ params, context }: Route.LoaderArgs) {
@@ -13,7 +13,9 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   const user = await trpc.auth.me.query().catch(() => null)
   if (!user) throw redirect(`/login?returnTo=/gatherings/${params.id}/edit`)
 
-  const gathering = await trpc.gathering.getById.query({ id: params.id }).catch(() => null)
+  const gathering = await trpc.gathering.getById
+    .query({ id: params.id })
+    .catch(() => null)
   if (!gathering) throw redirect('/dashboard')
   if (gathering.hostId !== user.id) throw redirect(`/gatherings/${params.id}`)
 
@@ -26,9 +28,15 @@ export async function loader({ params, context }: Route.LoaderArgs) {
       zipCode: gathering.zipCode,
       scheduleType: gathering.scheduleType,
       startsAt: toDatetimeLocal(new Date(gathering.startsAt)),
-      endDate: gathering.endDate ? toDateInput(new Date(gathering.endDate)) : '',
-      durationMinutes: gathering.durationMinutes != null ? String(gathering.durationMinutes) : '',
-      maxPlayers: gathering.maxPlayers != null ? String(gathering.maxPlayers) : '',
+      endDate: gathering.endDate
+        ? toDateInput(new Date(gathering.endDate))
+        : '',
+      durationMinutes:
+        gathering.durationMinutes != null
+          ? String(gathering.durationMinutes)
+          : '',
+      maxPlayers:
+        gathering.maxPlayers != null ? String(gathering.maxPlayers) : '',
       description: gathering.description,
       visibility: gathering.visibility,
     },
@@ -51,13 +59,25 @@ export async function action({ request, params, context }: Route.ActionArgs) {
       title: String(formData.get('title') ?? ''),
       gameIds: formData.getAll('gameIds').map(String),
       zipCode: String(formData.get('zipCode') ?? ''),
-      scheduleType: String(formData.get('scheduleType') ?? 'once') as 'once' | 'weekly' | 'biweekly' | 'monthly',
+      scheduleType: String(formData.get('scheduleType') ?? 'once') as
+        | 'once'
+        | 'weekly'
+        | 'biweekly'
+        | 'monthly',
       startsAt: new Date(String(formData.get('startsAt'))).toISOString(),
-      endDate: formData.get('endDate') ? new Date(String(formData.get('endDate'))).toISOString() : null,
-      durationMinutes: formData.get('durationMinutes') ? parseInt(String(formData.get('durationMinutes')), 10) : null,
-      maxPlayers: formData.get('maxPlayers') ? parseInt(String(formData.get('maxPlayers')), 10) : null,
+      endDate: formData.get('endDate')
+        ? new Date(String(formData.get('endDate'))).toISOString()
+        : null,
+      durationMinutes: formData.get('durationMinutes')
+        ? Number.parseInt(String(formData.get('durationMinutes')), 10)
+        : null,
+      maxPlayers: formData.get('maxPlayers')
+        ? Number.parseInt(String(formData.get('maxPlayers')), 10)
+        : null,
       description: String(formData.get('description') ?? ''),
-      visibility: String(formData.get('visibility') ?? 'public') as 'public' | 'private',
+      visibility: String(formData.get('visibility') ?? 'public') as
+        | 'public'
+        | 'private',
     })
     return redirect(`/gatherings/${params.id}`)
   } catch (error) {
@@ -65,7 +85,10 @@ export async function action({ request, params, context }: Route.ActionArgs) {
   }
 }
 
-export default function EditGathering({ loaderData, actionData }: Route.ComponentProps) {
+export default function EditGathering({
+  loaderData,
+  actionData,
+}: Route.ComponentProps) {
   const navigation = useNavigation()
   const isPending = navigation.state === 'submitting'
 
