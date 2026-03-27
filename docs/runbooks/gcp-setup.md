@@ -53,7 +53,9 @@ This takes a few minutes.
       --password=$DB_PASSWORD \
       --project=$PROJECT_ID
 
-## 5. Create Service Account
+## 5. Create Runtime Service Account
+
+This service account is used by Cloud Run services to connect to Cloud SQL at runtime.
 
     gcloud iam service-accounts create game-finder-runner \
       --display-name="Game Finder Cloud Run" \
@@ -64,6 +66,8 @@ This takes a few minutes.
       --role="roles/cloudsql.client"
 
 ## 6. Set Up Workload Identity Federation
+
+This creates a deployer service account for GitHub Actions CI/CD and configures OIDC-based authentication so no long-lived keys are needed.
 
     # Create pool
     gcloud iam workload-identity-pools create github-pool \
@@ -81,7 +85,7 @@ This takes a few minutes.
       --issuer-uri="https://token.actions.githubusercontent.com" \
       --project=$PROJECT_ID
 
-    # Create deploy service account
+    # Create deploy service account (used by GitHub Actions for build/push/deploy)
     gcloud iam service-accounts create github-deployer \
       --display-name="GitHub Actions Deployer" \
       --project=$PROJECT_ID
@@ -129,13 +133,21 @@ In your GitHub repo settings, add these:
 
 ## 9. Initial Deploy
 
-Run the first deploy by pushing to main. The deploy workflow will:
-1. Build and push images
-2. Run migrations against Cloud SQL
-3. Deploy server (creates the Cloud Run service)
-4. Capture server URL and deploy web
+Run the first deploy by pushing to main. The deploy workflow (`.github/workflows/deploy.yml`) will:
+1. Run lint, typecheck, and tests
+2. Build and push server/web Docker images to Artifact Registry
+3. Run database migrations via Cloud SQL Auth Proxy
+4. Deploy server to Cloud Run (with `game-finder-runner` service account for Cloud SQL access)
+5. Capture the server URL and deploy web to Cloud Run
 
 After the first successful deploy, note the URLs:
 
     gcloud run services describe game-finder-server --region=$REGION --format='value(status.url)'
     gcloud run services describe game-finder-web --region=$REGION --format='value(status.url)'
+
+## Service Account Summary
+
+| Account | Purpose | Used By |
+|---------|---------|---------|
+| `game-finder-runner` | Cloud SQL access at runtime | Cloud Run services |
+| `github-deployer` | Build, push, deploy, migrate | GitHub Actions (via WIF) |
