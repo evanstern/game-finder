@@ -65,17 +65,23 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const sortBy = (url.searchParams.get('sort') ?? 'distance') as 'distance' | 'next_session'
   const page = Number(url.searchParams.get('page')) || 1
 
-  const results = await trpc.gathering.search.query({
-    zipCode: zip,
-    radius,
-    query: query || undefined,
-    gameTypes: gameTypes && gameTypes.length > 0 ? gameTypes : undefined,
-    sortBy,
-    page,
-    pageSize: 20,
-  })
+  try {
+    const results = await trpc.gathering.search.query({
+      zipCode: zip,
+      radius,
+      query: query || undefined,
+      gameTypes: gameTypes && gameTypes.length > 0 ? gameTypes : undefined,
+      sortBy,
+      page,
+      pageSize: 20,
+    })
 
-  return { results }
+    return { results, error: null }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Search failed'
+    const isInvalidZip = message.toLowerCase().includes('zip') || message.toLowerCase().includes('location')
+    return { results: null, error: isInvalidZip ? `Invalid ZIP code "${zip}". Please enter a valid 5-digit US ZIP code.` : message }
+  }
 }
 
 function GameTypeBadge({ type }: { type: GameType }) {
@@ -115,6 +121,7 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
   const hasSearched = !!urlZip
   const isLoading = navigation.state === 'loading'
   const data = loaderData.results
+  const searchError = loaderData.error
 
   function updateSearchParams(updates: Record<string, string | undefined>) {
     const newParams = new URLSearchParams(searchParams)
@@ -220,6 +227,12 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
           </Button>
         </div>
       </form>
+
+      {searchError && (
+        <div className="mb-6 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3">
+          <p className="text-sm text-destructive-foreground">{searchError}</p>
+        </div>
+      )}
 
       {!hasSearched && (
         <div className="flex min-h-[40vh] items-center justify-center">

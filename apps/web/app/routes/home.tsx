@@ -30,11 +30,17 @@ const HOW_IT_WORKS = [
 function SearchCard() {
   const [zip, setZip] = useState('')
   const [query, setQuery] = useState('')
+  const [zipError, setZipError] = useState('')
   const navigate = useNavigate()
 
   function handleSearch() {
+    if (!zip || !/^\d{5}$/.test(zip)) {
+      setZipError('Please enter a valid 5-digit ZIP code')
+      return
+    }
+    setZipError('')
     const params = new URLSearchParams()
-    if (zip) params.set('zip', zip)
+    params.set('zip', zip)
     if (query) params.set('q', query)
     navigate(`/search?${params.toString()}`)
   }
@@ -72,6 +78,9 @@ function SearchCard() {
         </Button>
       </div>
 
+      {zipError && (
+        <p className="text-sm text-destructive mb-2">{zipError}</p>
+      )}
       <div className="flex flex-wrap gap-1.5">
         {POPULAR_TAGS.map((tag) => (
           <Badge

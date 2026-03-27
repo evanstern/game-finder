@@ -27,6 +27,13 @@ export async function action({ request, context }: Route.ActionArgs) {
   const email = String(formData.get('email') ?? '')
   const password = String(formData.get('password') ?? '')
 
+  if (!email || !password) {
+    const errors: Record<string, string> = {}
+    if (!email) errors.email = 'Email is required'
+    if (!password) errors.password = 'Password is required'
+    return { errors }
+  }
+
   const serverUrl = process.env.SERVER_URL
   if (!serverUrl) throw new Error('SERVER_URL environment variable is required')
 
@@ -43,7 +50,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   if (!res.ok || body.error) {
     const message = body.error?.message ?? 'Login failed'
-    return { errors: { form: message } }
+    return { errors: { form: message } as Record<string, string> }
   }
 
   const setCookies = res.headers.getSetCookie()
@@ -93,6 +100,9 @@ export default function LogIn({ actionData }: Route.ComponentProps) {
                 placeholder="you@example.com"
                 required
               />
+              {errors.email && (
+                <p className="text-sm text-destructive">{errors.email}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="password" className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
@@ -105,6 +115,9 @@ export default function LogIn({ actionData }: Route.ComponentProps) {
                 placeholder="Enter your password"
                 required
               />
+              {errors.password && (
+                <p className="text-sm text-destructive">{errors.password}</p>
+              )}
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">

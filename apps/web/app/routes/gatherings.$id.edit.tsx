@@ -1,6 +1,7 @@
 import { redirect, useNavigation } from 'react-router'
 import { GatheringForm } from '../components/gathering-form.js'
 import { MapBackground } from '../components/map-background.js'
+import { parseGatheringErrors } from '../utils/parse-gathering-errors.js'
 import { createServerTRPC } from '../trpc/server.js'
 import type { Route } from './+types/gatherings.$id.edit.js'
 
@@ -71,8 +72,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
     })
     return redirect(`/gatherings/${params.id}`)
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to update gathering'
-    return { errors: { form: message } }
+    return { errors: parseGatheringErrors(error) }
   }
 }
 

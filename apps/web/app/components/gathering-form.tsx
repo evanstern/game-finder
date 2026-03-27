@@ -121,7 +121,8 @@ export function GatheringForm({
           <div className="animate-fade-in-up animation-delay-200 grid grid-cols-4 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="zipCode" className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Zip Code</Label>
-              <Input id="zipCode" name="zipCode" defaultValue={initialData?.zipCode ?? ''} placeholder="90210" required />
+              <Input id="zipCode" name="zipCode" defaultValue={initialData?.zipCode ?? ''} placeholder="90210" required maxLength={5} pattern="\d{5}" />
+              {errors.zipCode && <p className="text-sm text-destructive">{errors.zipCode}</p>}
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Schedule</Label>
@@ -140,6 +141,7 @@ export function GatheringForm({
             <div className="space-y-1.5">
               <Label htmlFor="startsAt" className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Date & Time</Label>
               <Input id="startsAt" name="startsAt" type="datetime-local" defaultValue={initialData?.startsAt ?? ''} required />
+              {errors.startsAt && <p className="text-sm text-destructive">{errors.startsAt}</p>}
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Visibility</Label>
@@ -166,11 +168,13 @@ export function GatheringForm({
             )}
             <div className="space-y-1.5">
               <Label htmlFor="durationMinutes" className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Duration (min)</Label>
-              <Input id="durationMinutes" name="durationMinutes" type="number" defaultValue={initialData?.durationMinutes ?? ''} placeholder="180" />
+              <Input id="durationMinutes" name="durationMinutes" type="number" defaultValue={initialData?.durationMinutes ?? ''} placeholder="180" min={1} />
+              {errors.durationMinutes && <p className="text-sm text-destructive">{errors.durationMinutes}</p>}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="maxPlayers" className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Max Players</Label>
-              <Input id="maxPlayers" name="maxPlayers" type="number" defaultValue={initialData?.maxPlayers ?? ''} placeholder="6" />
+              <Input id="maxPlayers" name="maxPlayers" type="number" defaultValue={initialData?.maxPlayers ?? ''} placeholder="6" min={1} />
+              {errors.maxPlayers && <p className="text-sm text-destructive">{errors.maxPlayers}</p>}
             </div>
           </div>
 
@@ -178,6 +182,7 @@ export function GatheringForm({
             <Label className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Description (Markdown)</Label>
             <input type="hidden" name="description" value={description} />
             <MarkdownEditor value={description} onChange={setDescription} placeholder="Describe your gathering..." />
+            {errors.description && <p className="text-sm text-destructive">{errors.description}</p>}
           </div>
         </CardContent>
         <CardFooter className="justify-center pt-4">
