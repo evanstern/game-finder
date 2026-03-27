@@ -17,12 +17,12 @@ COPY . .
 RUN pnpm --filter @game-finder/web... build
 
 FROM node:22-slim AS runtime
-WORKDIR /app
-COPY --from=build /app/apps/web/build ./apps/web/build
-COPY --from=build /app/apps/web/package.json ./apps/web/
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
-COPY --from=build /app/package.json ./
+WORKDIR /app/apps/web
+COPY --from=build /app/apps/web/build ./build
+COPY --from=build /app/apps/web/package.json ./
+COPY --from=deps /app/node_modules ../../node_modules
+COPY --from=deps /app/apps/web/node_modules ./node_modules
+COPY --from=build /app/package.json ../../
 
 EXPOSE 3000
-CMD ["node", "apps/web/build/server/index.js"]
+CMD ["node", "build/server/index.js"]
