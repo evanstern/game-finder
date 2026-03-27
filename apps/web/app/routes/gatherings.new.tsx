@@ -3,6 +3,7 @@ import { GatheringForm } from '../components/gathering-form.js'
 import { MapBackground } from '../components/map-background.js'
 import { createServerTRPC } from '../trpc/server.js'
 import { parseGatheringErrors } from '../utils/parse-gathering-errors.js'
+import { parseGatheringFormData } from '../utils/parse-gathering-form-data.js'
 import type { Route } from './+types/gatherings.new.js'
 
 export async function loader({ context }: Route.LoaderArgs) {
@@ -25,30 +26,9 @@ export async function action({ request, context }: Route.ActionArgs) {
   const formData = await request.formData()
 
   try {
-    const result = await trpc.gathering.create.mutate({
-      title: String(formData.get('title') ?? ''),
-      gameIds: formData.getAll('gameIds').map(String),
-      zipCode: String(formData.get('zipCode') ?? ''),
-      scheduleType: String(formData.get('scheduleType') ?? 'once') as
-        | 'once'
-        | 'weekly'
-        | 'biweekly'
-        | 'monthly',
-      startsAt: new Date(String(formData.get('startsAt'))).toISOString(),
-      endDate: formData.get('endDate')
-        ? new Date(String(formData.get('endDate'))).toISOString()
-        : null,
-      durationMinutes: formData.get('durationMinutes')
-        ? Number.parseInt(String(formData.get('durationMinutes')), 10)
-        : null,
-      maxPlayers: formData.get('maxPlayers')
-        ? Number.parseInt(String(formData.get('maxPlayers')), 10)
-        : null,
-      description: String(formData.get('description') ?? ''),
-      visibility: String(formData.get('visibility') ?? 'public') as
-        | 'public'
-        | 'private',
-    })
+    const result = await trpc.gathering.create.mutate(
+      parseGatheringFormData(formData),
+    )
     return redirect(`/gatherings/${result.id}`)
   } catch (error) {
     return { errors: parseGatheringErrors(error) }

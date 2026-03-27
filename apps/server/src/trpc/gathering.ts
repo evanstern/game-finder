@@ -327,81 +327,82 @@ export const gatheringRouter = createRouter({
   join: protectedProcedure
     .input(joinGatheringSchema)
     .mutation(async ({ input, ctx }) => {
-      // Row-level lock to prevent race conditions on max_players check
-      const gathering = await ctx.db
-        .selectFrom('gathering')
-        .selectAll()
-        .where('id', '=', input.gatheringId)
-        .forUpdate()
-        .executeTakeFirst()
+      const participant = await ctx.db.transaction().execute(async (trx) => {
+        const gathering = await trx
+          .selectFrom('gathering')
+          .selectAll()
+          .where('id', '=', input.gatheringId)
+          .forUpdate()
+          .executeTakeFirst()
 
-      if (!gathering) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Gathering not found',
-        })
-      }
-
-      if (gathering.status !== 'active') {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Gathering is not active',
-        })
-      }
-
-      if (gathering.host_id === ctx.userId) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Host cannot join their own gathering',
-        })
-      }
-
-      if (gathering.visibility === 'private') {
-        if (!input.joinCode || input.joinCode !== gathering.join_code) {
+        if (!gathering) {
           throw new TRPCError({
-            code: 'FORBIDDEN',
-            message: 'Invalid join code',
+            code: 'NOT_FOUND',
+            message: 'Gathering not found',
           })
         }
-      }
 
-      const existing = await ctx.db
-        .selectFrom('gathering_participant')
-        .select('id')
-        .where('gathering_id', '=', input.gatheringId)
-        .where('user_id', '=', ctx.userId)
-        .executeTakeFirst()
-
-      if (existing) {
-        throw new TRPCError({
-          code: 'CONFLICT',
-          message: 'Already a participant',
-        })
-      }
-
-      let status: 'joined' | 'waitlisted' = 'joined'
-      if (gathering.max_players !== null) {
-        const countResult = await ctx.db
-          .selectFrom('gathering_participant')
-          .select(sql<number>`count(*)`.as('count'))
-          .where('gathering_id', '=', input.gatheringId)
-          .where('status', '=', 'joined')
-          .executeTakeFirstOrThrow()
-
-        if (Number(countResult.count) >= gathering.max_players) {
-          status = 'waitlisted'
+        if (gathering.status !== 'active') {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Gathering is not active',
+          })
         }
-      }
 
-      const participant = await ctx.db
-        .insertInto('gathering_participant')
-        .values({
-          gathering_id: input.gatheringId,
-          user_id: ctx.userId,
-          status,
-        })
-        .returningAll()
-        .executeTakeFirstOrThrow()
+        if (gathering.host_id === ctx.userId) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Host cannot join their own gathering',
+          })
+        }
+
+        if (gathering.visibility === 'private') {
+          if (!input.joinCode || input.joinCode !== gathering.join_code) {
+            throw new TRPCError({
+              code: 'FORBIDDEN',
+              message: 'Invalid join code',
+            })
+          }
+        }
+
+        const existing = await trx
+          .selectFrom('gathering_participant')
+          .select('id')
+          .where('gathering_id', '=', input.gatheringId)
+          .where('user_id', '=', ctx.userId)
+          .executeTakeFirst()
+
+        if (existing) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'Already a participant',
+          })
+        }
+
+        let status: 'joined' | 'waitlisted' = 'joined'
+        if (gathering.max_players !== null) {
+          const countResult = await trx
+            .selectFrom('gathering_participant')
+            .select(sql<number>`count(*)`.as('count'))
+            .where('gathering_id', '=', input.gatheringId)
+            .where('status', '=', 'joined')
+            .executeTakeFirstOrThrow()
+
+          if (Number(countResult.count) >= gathering.max_players) {
+            status = 'waitlisted'
+          }
+        }
+
+        return trx
+          .insertInto('gathering_participant')
+          .values({
+            gathering_id: input.gatheringId,
+            user_id: ctx.userId,
+            status,
+          })
+          .returningAll()
+          .executeTakeFirstOrThrow()
+      })
 
       const user = await ctx.db
         .selectFrom('users')
@@ -418,64 +419,68 @@ export const gatheringRouter = createRouter({
   leave: protectedProcedure
     .input(leaveGatheringSchema)
     .mutation(async ({ input, ctx }) => {
-      const gathering = await ctx.db
-        .selectFrom('gathering')
-        .select(['id', 'host_id', 'max_players'])
-        .where('id', '=', input.gatheringId)
-        .forUpdate()
-        .executeTakeFirst()
-
-      if (!gathering) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Gathering not found',
-        })
-      }
-
-      if (gathering.host_id === ctx.userId) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Host cannot leave — close the gathering instead',
-        })
-      }
-
-      const participant = await ctx.db
-        .selectFrom('gathering_participant')
-        .select(['id', 'status'])
-        .where('gathering_id', '=', input.gatheringId)
-        .where('user_id', '=', ctx.userId)
-        .executeTakeFirst()
-
-      if (!participant) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Not a participant' })
-      }
-
-      await ctx.db
-        .deleteFrom('gathering_participant')
-        .where('id', '=', participant.id)
-        .execute()
-
-      // Auto-promote oldest waitlisted participant if a joined member left
-      if (participant.status === 'joined' && gathering.max_players !== null) {
-        const nextWaitlisted = await ctx.db
-          .selectFrom('gathering_participant')
-          .select('id')
-          .where('gathering_id', '=', input.gatheringId)
-          .where('status', '=', 'waitlisted')
-          .orderBy('created_at', 'asc')
-          .limit(1)
+      return ctx.db.transaction().execute(async (trx) => {
+        const gathering = await trx
+          .selectFrom('gathering')
+          .select(['id', 'host_id', 'max_players'])
+          .where('id', '=', input.gatheringId)
+          .forUpdate()
           .executeTakeFirst()
 
-        if (nextWaitlisted) {
-          await ctx.db
-            .updateTable('gathering_participant')
-            .set({ status: 'joined' })
-            .where('id', '=', nextWaitlisted.id)
-            .execute()
+        if (!gathering) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Gathering not found',
+          })
         }
-      }
 
-      return { success: true }
+        if (gathering.host_id === ctx.userId) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Host cannot leave — close the gathering instead',
+          })
+        }
+
+        const participant = await trx
+          .selectFrom('gathering_participant')
+          .select(['id', 'status'])
+          .where('gathering_id', '=', input.gatheringId)
+          .where('user_id', '=', ctx.userId)
+          .executeTakeFirst()
+
+        if (!participant) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Not a participant',
+          })
+        }
+
+        await trx
+          .deleteFrom('gathering_participant')
+          .where('id', '=', participant.id)
+          .execute()
+
+        if (participant.status === 'joined' && gathering.max_players !== null) {
+          const nextWaitlisted = await trx
+            .selectFrom('gathering_participant')
+            .select('id')
+            .where('gathering_id', '=', input.gatheringId)
+            .where('status', '=', 'waitlisted')
+            .orderBy('created_at', 'asc')
+            .limit(1)
+            .executeTakeFirst()
+
+          if (nextWaitlisted) {
+            await trx
+              .updateTable('gathering_participant')
+              .set({ status: 'joined' })
+              .where('id', '=', nextWaitlisted.id)
+              .execute()
+          }
+        }
+
+        return { success: true }
+      })
     }),
 
   listParticipants: publicProcedure
