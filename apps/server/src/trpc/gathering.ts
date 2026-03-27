@@ -327,84 +327,82 @@ export const gatheringRouter = createRouter({
   join: protectedProcedure
     .input(joinGatheringSchema)
     .mutation(async ({ input, ctx }) => {
-      const participant = await ctx.db
-        .transaction()
-        .execute(async (trx) => {
-          const gathering = await trx
-            .selectFrom('gathering')
-            .selectAll()
-            .where('id', '=', input.gatheringId)
-            .forUpdate()
-            .executeTakeFirst()
+      const participant = await ctx.db.transaction().execute(async (trx) => {
+        const gathering = await trx
+          .selectFrom('gathering')
+          .selectAll()
+          .where('id', '=', input.gatheringId)
+          .forUpdate()
+          .executeTakeFirst()
 
-          if (!gathering) {
+        if (!gathering) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Gathering not found',
+          })
+        }
+
+        if (gathering.status !== 'active') {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Gathering is not active',
+          })
+        }
+
+        if (gathering.host_id === ctx.userId) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Host cannot join their own gathering',
+          })
+        }
+
+        if (gathering.visibility === 'private') {
+          if (!input.joinCode || input.joinCode !== gathering.join_code) {
             throw new TRPCError({
-              code: 'NOT_FOUND',
-              message: 'Gathering not found',
+              code: 'FORBIDDEN',
+              message: 'Invalid join code',
             })
           }
+        }
 
-          if (gathering.status !== 'active') {
-            throw new TRPCError({
-              code: 'BAD_REQUEST',
-              message: 'Gathering is not active',
-            })
-          }
+        const existing = await trx
+          .selectFrom('gathering_participant')
+          .select('id')
+          .where('gathering_id', '=', input.gatheringId)
+          .where('user_id', '=', ctx.userId)
+          .executeTakeFirst()
 
-          if (gathering.host_id === ctx.userId) {
-            throw new TRPCError({
-              code: 'BAD_REQUEST',
-              message: 'Host cannot join their own gathering',
-            })
-          }
+        if (existing) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'Already a participant',
+          })
+        }
 
-          if (gathering.visibility === 'private') {
-            if (!input.joinCode || input.joinCode !== gathering.join_code) {
-              throw new TRPCError({
-                code: 'FORBIDDEN',
-                message: 'Invalid join code',
-              })
-            }
-          }
-
-          const existing = await trx
+        let status: 'joined' | 'waitlisted' = 'joined'
+        if (gathering.max_players !== null) {
+          const countResult = await trx
             .selectFrom('gathering_participant')
-            .select('id')
+            .select(sql<number>`count(*)`.as('count'))
             .where('gathering_id', '=', input.gatheringId)
-            .where('user_id', '=', ctx.userId)
-            .executeTakeFirst()
-
-          if (existing) {
-            throw new TRPCError({
-              code: 'CONFLICT',
-              message: 'Already a participant',
-            })
-          }
-
-          let status: 'joined' | 'waitlisted' = 'joined'
-          if (gathering.max_players !== null) {
-            const countResult = await trx
-              .selectFrom('gathering_participant')
-              .select(sql<number>`count(*)`.as('count'))
-              .where('gathering_id', '=', input.gatheringId)
-              .where('status', '=', 'joined')
-              .executeTakeFirstOrThrow()
-
-            if (Number(countResult.count) >= gathering.max_players) {
-              status = 'waitlisted'
-            }
-          }
-
-          return trx
-            .insertInto('gathering_participant')
-            .values({
-              gathering_id: input.gatheringId,
-              user_id: ctx.userId,
-              status,
-            })
-            .returningAll()
+            .where('status', '=', 'joined')
             .executeTakeFirstOrThrow()
-        })
+
+          if (Number(countResult.count) >= gathering.max_players) {
+            status = 'waitlisted'
+          }
+        }
+
+        return trx
+          .insertInto('gathering_participant')
+          .values({
+            gathering_id: input.gatheringId,
+            user_id: ctx.userId,
+            status,
+          })
+          .returningAll()
+          .executeTakeFirstOrThrow()
+      })
 
       const user = await ctx.db
         .selectFrom('users')
@@ -451,7 +449,10 @@ export const gatheringRouter = createRouter({
           .executeTakeFirst()
 
         if (!participant) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Not a participant' })
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Not a participant',
+          })
         }
 
         await trx
