@@ -26,7 +26,8 @@ function SearchCard() {
   const [zipError, setZipError] = useState('')
   const navigate = useNavigate()
 
-  function handleSearch() {
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault()
     if (!zip || !/^\d{5}$/.test(zip)) {
       setZipError('Please enter a valid 5-digit ZIP code')
       return
@@ -45,20 +46,18 @@ function SearchCard() {
     navigate(`/search?${params.toString()}`)
   }
 
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Enter') handleSearch()
-  }
-
   return (
     <div className="bg-white/[0.04] border border-[rgba(255,191,71,0.15)] rounded-xl p-5 max-w-[420px] mx-auto">
-      <div className="flex flex-col md:flex-row gap-2 mb-3">
+      <form
+        onSubmit={handleSearch}
+        className="flex flex-col md:flex-row gap-2 mb-3"
+      >
         <Input
           type="text"
           placeholder="Zip Code"
           maxLength={5}
           value={zip}
           onChange={(e) => setZip(e.target.value)}
-          onKeyDown={handleKeyDown}
           className="w-full md:w-28"
         />
         <Input
@@ -66,13 +65,12 @@ function SearchCard() {
           placeholder="Game type..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={handleKeyDown}
           className="flex-1"
         />
-        <Button onClick={handleSearch} size="sm">
+        <Button type="submit" size="sm">
           Search
         </Button>
-      </div>
+      </form>
 
       {zipError && <p className="text-sm text-destructive mb-2">{zipError}</p>}
       <div className="flex flex-wrap gap-1.5">
