@@ -15,6 +15,7 @@ COPY . .
 RUN pnpm --filter @game-finder/server... build
 
 FROM base AS runtime
+RUN npm install -g tsx
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/server/node_modules ./apps/server/node_modules
