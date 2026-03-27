@@ -74,6 +74,16 @@ pnpm --filter db seed           # Seed database
 pnpm --filter db seed:zip-codes # Seed zip code data
 ```
 
+### Worktree Setup
+
+```bash
+./scripts/worktree-setup.sh    # Set up Docker + DB for this worktree (auto-assigns ports)
+./scripts/worktree-teardown.sh # Tear down containers and volumes
+./scripts/worktree-teardown.sh --clean # Also removes .env
+```
+
+Each worktree gets isolated Docker containers with unique ports derived from the directory name. The setup script handles `.env` creation, port assignment, `docker compose up`, migrations, and seeding in one command.
+
 ## Package Manager
 
 - Use `pnpm` (not npm/yarn)
