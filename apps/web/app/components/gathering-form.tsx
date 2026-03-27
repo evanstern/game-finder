@@ -96,7 +96,7 @@ export function GatheringForm({
               {errors.title && <p className="text-sm text-destructive">{errors.title}</p>}
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Games</Label>
+              <Label className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Games <span className="text-destructive">*</span> <span className="normal-case tracking-normal font-normal text-muted-foreground/60">— select at least one</span></Label>
               <div className="flex flex-wrap gap-1.5 rounded-md border border-border bg-background/40 px-4 py-2 min-h-[40px] items-center">
                 {games.map((game) => (
                   <Button

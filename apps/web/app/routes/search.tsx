@@ -20,6 +20,7 @@ import {
 } from '@game-finder/ui/components/select'
 import { useState } from 'react'
 import { Link, useNavigation, useSearchParams } from 'react-router'
+import { ClientDate } from '../components/client-date.js'
 import { MapBackground } from '../components/map-background.js'
 import { createServerTRPC } from '../trpc/server.js'
 import type { Route } from './+types/search.js'
@@ -39,15 +40,6 @@ const SCHEDULE_LABELS: Record<string, string> = {
   weekly: 'Every week',
   biweekly: 'Every other week',
   monthly: 'Monthly',
-}
-
-function formatDate(date: string | Date | null): string {
-  if (!date) return 'TBD'
-  return new Date(date).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
 }
 
 export async function loader({ request, context }: Route.LoaderArgs) {
@@ -375,7 +367,7 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
 
                             <div className="mt-2 flex gap-4 text-xs text-muted-foreground">
                               <span>
-                                Next: {formatDate(gathering.nextOccurrenceAt)}
+                                Next: <ClientDate date={gathering.nextOccurrenceAt} dateStyle="medium" />
                               </span>
                               {gathering.maxPlayers && (
                                 <span>
