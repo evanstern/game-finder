@@ -1,6 +1,7 @@
 import { Badge } from '@game-finder/ui/components/badge'
 import { Button } from '@game-finder/ui/components/button'
 import { Form, Link, redirect, useNavigation } from 'react-router'
+import { ClientDate } from '../components/client-date.js'
 import { MapBackground } from '../components/map-background.js'
 import { createServerTRPC } from '../trpc/server.js'
 import type { Route } from './+types/dashboard.js'
@@ -86,11 +87,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
                     {gathering.title}
                   </Link>
                   <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-                    <span>
-                      {gathering.nextOccurrenceAt
-                        ? new Date(gathering.nextOccurrenceAt).toLocaleDateString([], { dateStyle: 'medium' })
-                        : 'No upcoming session'}
-                    </span>
+                    <ClientDate date={gathering.nextOccurrenceAt} fallback="No upcoming session" dateStyle="medium" />
                     <Badge variant={gathering.status === 'active' ? 'default' : 'secondary'} className="text-[10px]">
                       {gathering.status === 'active' ? 'Active' : 'Closed'}
                     </Badge>
@@ -159,11 +156,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
                       {gathering.title}
                     </Link>
                     <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-                      <span>
-                        {gathering.nextOccurrenceAt
-                          ? new Date(gathering.nextOccurrenceAt).toLocaleDateString([], { dateStyle: 'medium' })
-                          : 'No upcoming session'}
-                      </span>
+                      <ClientDate date={gathering.nextOccurrenceAt} fallback="No upcoming session" dateStyle="medium" />
                       <Badge
                         variant={gathering.participantStatus === 'joined' ? 'default' : 'secondary'}
                         className="text-[10px]"

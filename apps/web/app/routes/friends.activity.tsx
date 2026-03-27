@@ -1,6 +1,7 @@
 import { Badge } from '@game-finder/ui/components/badge'
 import { Button } from '@game-finder/ui/components/button'
 import { Link, redirect, useSearchParams } from 'react-router'
+import { ClientDate } from '../components/client-date.js'
 import { MapBackground } from '../components/map-background.js'
 import { createServerTRPC } from '../trpc/server.js'
 import type { Route } from './+types/friends.activity.js'
@@ -66,9 +67,7 @@ export default function FriendActivity({ loaderData }: Route.ComponentProps) {
                     {gathering.title}
                   </h3>
                   {gathering.nextOccurrenceAt && (
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {new Date(gathering.nextOccurrenceAt).toLocaleDateString([], { dateStyle: 'medium' })}
-                    </span>
+                    <ClientDate date={gathering.nextOccurrenceAt} dateStyle="medium" className="text-xs text-muted-foreground whitespace-nowrap" />
                   )}
                 </div>
                 <div className="flex flex-wrap gap-1.5">

@@ -4,6 +4,7 @@ import { Input } from '@game-finder/ui/components/input'
 import { useState } from 'react'
 import { data, Form, Link, redirect } from 'react-router'
 import ReactMarkdown from 'react-markdown'
+import { ClientDate, ScheduleLabel } from '../components/client-date.js'
 import { MapBackground } from '../components/map-background.js'
 import { createServerTRPC } from '../trpc/server.js'
 import type { Route } from './+types/gatherings.$id.js'
@@ -64,19 +65,6 @@ export async function action({ request, params, context }: Route.ActionArgs) {
   }
 
   return redirect(`/gatherings/${params.id}`)
-}
-
-function formatSchedule(scheduleType: string, startsAt: Date): string {
-  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-  const day = days[new Date(startsAt).getDay()]
-  const time = new Date(startsAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-  switch (scheduleType) {
-    case 'once': return `One-time — ${new Date(startsAt).toLocaleDateString()} at ${time}`
-    case 'weekly': return `Weekly — ${day}s at ${time}`
-    case 'biweekly': return `Every 2 weeks — ${day}s at ${time}`
-    case 'monthly': return `Monthly — ${day}s at ${time}`
-    default: return scheduleType
-  }
 }
 
 function JoinForm({
@@ -178,12 +166,12 @@ export default function GatheringDetails({ loaderData }: Route.ComponentProps) {
         <div className="grid grid-cols-2 gap-5 text-sm">
           <div>
             <p className="font-semibold text-[11px] tracking-[0.15em] text-primary uppercase mb-1.5">Schedule</p>
-            <p className="text-foreground">{formatSchedule(gathering.scheduleType, new Date(gathering.startsAt))}</p>
+            <ScheduleLabel scheduleType={gathering.scheduleType} startsAt={gathering.startsAt} className="text-foreground" />
           </div>
           {gathering.nextOccurrenceAt && (
             <div>
               <p className="font-semibold text-[11px] tracking-[0.15em] text-primary uppercase mb-1.5">Next Session</p>
-              <p className="text-foreground">{new Date(gathering.nextOccurrenceAt).toLocaleDateString([], { dateStyle: 'medium' })}</p>
+              <ClientDate date={gathering.nextOccurrenceAt} dateStyle="medium" className="text-foreground" />
             </div>
           )}
           <div>

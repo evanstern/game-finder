@@ -1,21 +1,10 @@
 import { redirect, useNavigation } from 'react-router'
+import { toDateInput, toDatetimeLocal } from '../components/client-date.js'
 import { GatheringForm } from '../components/gathering-form.js'
 import { MapBackground } from '../components/map-background.js'
 import { parseGatheringErrors } from '../utils/parse-gathering-errors.js'
 import { createServerTRPC } from '../trpc/server.js'
 import type { Route } from './+types/gatherings.$id.edit.js'
-
-function toDatetimeLocal(date: Date): string {
-  const d = new Date(date)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-
-function toDateInput(date: Date): string {
-  const d = new Date(date)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-}
 
 export async function loader({ params, context }: Route.LoaderArgs) {
   const ctx = context as { cookie?: string }
