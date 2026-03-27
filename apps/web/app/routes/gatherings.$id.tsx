@@ -1,8 +1,8 @@
 import { Badge } from '@game-finder/ui/components/badge'
 import { Button } from '@game-finder/ui/components/button'
 import { Input } from '@game-finder/ui/components/input'
-import { useState } from 'react'
-import { data, Form, Link, redirect } from 'react-router'
+import { useEffect, useState } from 'react'
+import { data, Form, Link, redirect, useSearchParams } from 'react-router'
 import ReactMarkdown from 'react-markdown'
 import { ClientDate, ScheduleLabel } from '../components/client-date.js'
 import { MapBackground } from '../components/map-background.js'
@@ -49,22 +49,32 @@ export async function action({ request, params, context }: Route.ActionArgs) {
   const formData = await request.formData()
   const intent = String(formData.get('intent'))
 
+  let actionResult = ''
+
   if (intent === 'close') {
     await trpc.gathering.close.mutate({ id: params.id })
+    actionResult = 'closed'
   } else if (intent === 'join') {
     const joinCode = String(formData.get('joinCode') ?? '')
     await trpc.gathering.join.mutate({
       gatheringId: params.id,
       joinCode: joinCode || undefined,
     })
+    actionResult = 'joined'
   } else if (intent === 'leave') {
     await trpc.gathering.leave.mutate({ gatheringId: params.id })
+    actionResult = 'left'
   } else if (intent === 'sendFriendRequest') {
     const targetUserId = String(formData.get('targetUserId'))
     await trpc.friendship.sendRequest.mutate({ userId: targetUserId })
+    actionResult = 'friend_request_sent'
   }
 
-  return redirect(`/gatherings/${params.id}`)
+  const url = new URL(request.url)
+  url.searchParams.delete('action')
+  if (actionResult) url.searchParams.set('action', actionResult)
+
+  return redirect(url.pathname + url.search)
 }
 
 function JoinForm({
@@ -99,6 +109,41 @@ function JoinForm({
   )
 }
 
+const ACTION_MESSAGES: Record<string, string> = {
+  joined: 'You joined the game!',
+  left: 'You left the game.',
+  closed: 'Gathering closed.',
+  friend_request_sent: 'Friend request sent!',
+}
+
+function ActionToast() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const action = searchParams.get('action')
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    if (action && ACTION_MESSAGES[action]) {
+      setVisible(true)
+      const timer = setTimeout(() => {
+        setVisible(false)
+        setSearchParams((prev) => {
+          prev.delete('action')
+          return prev
+        }, { replace: true })
+      }, 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [action, setSearchParams])
+
+  if (!visible || !action || !ACTION_MESSAGES[action]) return null
+
+  return (
+    <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 animate-fade-in-up rounded-lg border border-primary/30 bg-primary/10 px-4 py-2.5 text-sm text-primary backdrop-blur-sm">
+      {ACTION_MESSAGES[action]}
+    </div>
+  )
+}
+
 export default function GatheringDetails({ loaderData }: Route.ComponentProps) {
   const { gathering, user, participants, joinCode, outgoingRequests, incomingRequests, friends } = loaderData
   const isOwner = user?.id === gathering.hostId
@@ -106,6 +151,7 @@ export default function GatheringDetails({ loaderData }: Route.ComponentProps) {
   return (
     <div className="relative min-h-[calc(100vh-65px)]">
       <MapBackground />
+      <ActionToast />
 
     <div className="relative z-10 mx-auto max-w-4xl px-6 py-10 space-y-8">
       <div className="animate-fade-in-up flex items-start justify-between gap-4">

@@ -14,13 +14,6 @@ const POPULAR_TAGS = [
   { label: 'Pathfinder', emoji: '🎲' },
 ]
 
-const MAP_PINS = [
-  { label: '12 games', opacity: 0.5, size: 20 },
-  { label: '23 games', opacity: 0.8, size: 24 },
-  { label: '8 games', opacity: 0.6, size: 20 },
-  { label: '5 games', opacity: 0.4, size: 18 },
-]
-
 const HOW_IT_WORKS = [
   { icon: '🔍', label: 'Search', desc: 'Find games by zip code & type' },
   { icon: '📜', label: 'Browse', desc: 'Read details & check availability' },
@@ -46,7 +39,10 @@ function SearchCard() {
   }
 
   function handleTagClick(tag: string) {
-    setQuery(tag)
+    const params = new URLSearchParams()
+    if (zip) params.set('zip', zip)
+    params.set('q', tag)
+    navigate(`/search?${params.toString()}`)
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -138,15 +134,6 @@ export default function Home() {
         </div>
 
         <SearchCard />
-
-        <div className="hidden md:flex gap-7 justify-center items-center mt-8">
-          {MAP_PINS.map((pin) => (
-            <div key={pin.label} className="text-center" style={{ opacity: pin.opacity }}>
-              <div style={{ fontSize: pin.size }}>📍</div>
-              <div className="text-[rgba(255,255,255,0.3)] text-xs">{pin.label}</div>
-            </div>
-          ))}
-        </div>
 
         <div className="border-t border-[rgba(255,191,71,0.08)] mt-10 pt-8 pb-6 px-6">
           <p className="text-center text-xs text-[rgba(255,191,71,0.5)] uppercase tracking-[0.2em] mb-5">
