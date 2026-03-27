@@ -169,7 +169,7 @@ jobs:
             --allow-unauthenticated \
             --service-account game-finder-runner@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
             --add-cloudsql-instances ${{ env.CLOUD_SQL_INSTANCE }} \
-            --set-env-vars "DB_HOST=/cloudsql/${{ env.CLOUD_SQL_INSTANCE }},DB_PORT=5432,DB_NAME=${{ secrets.DB_NAME }},DB_USER=${{ secrets.DB_USER }},DB_PASSWORD=${{ secrets.DB_PASSWORD }},PORT=4000"
+            --set-env-vars "DB_HOST=/cloudsql/${{ env.CLOUD_SQL_INSTANCE }},DB_PORT=5432,DB_NAME=${{ secrets.DB_NAME }},DB_USER=${{ secrets.DB_USER }},DB_PASSWORD=${{ secrets.DB_PASSWORD }}"
 
       - name: Get server URL
         id: server-url
