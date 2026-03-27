@@ -9,7 +9,7 @@ Game Finder is a prototype app for finding local tabletop games (board games, D&
 - Monorepo: pnpm + Turborepo
 - Language: TypeScript everywhere
 - Database: PostgreSQL
-- ORM: Kysely (with kysely-codegen for type generation)
+- ORM: Kysely (hand-maintained types)
 - Cache/Queue: Redis (when needed)
 - Linter/Formatter: Biome
 - Test Runner: Vitest
