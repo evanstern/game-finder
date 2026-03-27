@@ -2,12 +2,11 @@ import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   cleanup,
   createTestCaller,
+  createTestGathering,
   createTestUser,
   db,
-  redis,
   seedGames,
   seedZipCodes,
-  createTestGathering,
 } from './helpers.js'
 
 let caller: Awaited<ReturnType<typeof createTestCaller>>['caller']
@@ -24,7 +23,6 @@ afterEach(async () => {
 
 afterAll(async () => {
   await db.destroy()
-  redis.disconnect()
 })
 
 describe('gathering.search', () => {

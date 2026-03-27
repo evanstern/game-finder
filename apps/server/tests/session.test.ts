@@ -1,55 +1,115 @@
-import Redis from 'ioredis'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 
+import { hashPassword, verifyPassword } from '../src/auth/password.js'
 import {
   createSession,
   deleteSession,
   getSession,
 } from '../src/auth/session.js'
-import { hashPassword, verifyPassword } from '../src/auth/password.js'
-
-const redis = new Redis({
-  host: process.env.REDIS_HOST,
-  port: Number(process.env.REDIS_PORT),
-})
+import { db } from '../src/db.js'
 
 beforeEach(async () => {
-  const keys = await redis.keys('session:*')
-  if (keys.length > 0) await redis.del(...keys)
+  await db.deleteFrom('session').execute()
 })
 
-afterAll(() => {
-  redis.disconnect()
+afterAll(async () => {
+  await db.deleteFrom('session').execute()
+  await db.destroy()
 })
 
 describe('Session helpers', () => {
   it('createSession stores session and returns ID', async () => {
-    const sessionId = await createSession(redis, 'user-123')
+    const user = await db
+      .insertInto('users')
+      .values({
+        email: 'session-test@example.com',
+        password_hash: await hashPassword('pass'),
+        display_name: 'Session Test',
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow()
+
+    const sessionId = await createSession(db, user.id)
     expect(sessionId).toBeTruthy()
 
-    const data = await redis.get(`session:${sessionId}`)
-    expect(data).toBeTruthy()
+    const row = await db
+      .selectFrom('session')
+      .selectAll()
+      .where('id', '=', sessionId)
+      .executeTakeFirst()
+    expect(row).toBeTruthy()
+    expect(row?.user_id).toBe(user.id)
 
-    const parsed = JSON.parse(data!) as { userId: string }
-    expect(parsed.userId).toBe('user-123')
+    await db.deleteFrom('users').where('id', '=', user.id).execute()
   })
 
   it('getSession returns session data for valid ID', async () => {
-    const sessionId = await createSession(redis, 'user-456')
-    const session = await getSession(redis, sessionId)
-    expect(session).toEqual({ userId: 'user-456' })
+    const user = await db
+      .insertInto('users')
+      .values({
+        email: 'session-get@example.com',
+        password_hash: await hashPassword('pass'),
+        display_name: 'Get Test',
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow()
+
+    const sessionId = await createSession(db, user.id)
+    const session = await getSession(db, sessionId)
+    expect(session).toEqual({ userId: user.id })
+
+    await db.deleteFrom('users').where('id', '=', user.id).execute()
   })
 
   it('getSession returns null for invalid ID', async () => {
-    const session = await getSession(redis, 'nonexistent')
+    const session = await getSession(db, '00000000-0000-0000-0000-000000000000')
     expect(session).toBeNull()
   })
 
   it('deleteSession removes the session', async () => {
-    const sessionId = await createSession(redis, 'user-789')
-    await deleteSession(redis, sessionId)
-    const session = await getSession(redis, sessionId)
+    const user = await db
+      .insertInto('users')
+      .values({
+        email: 'session-del@example.com',
+        password_hash: await hashPassword('pass'),
+        display_name: 'Del Test',
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow()
+
+    const sessionId = await createSession(db, user.id)
+    await deleteSession(db, sessionId)
+    const session = await getSession(db, sessionId)
     expect(session).toBeNull()
+
+    await db.deleteFrom('users').where('id', '=', user.id).execute()
+  })
+
+  it('getSession returns null for an expired session', async () => {
+    const user = await db
+      .insertInto('users')
+      .values({
+        email: 'session-expired@example.com',
+        password_hash: await hashPassword('pass'),
+        display_name: 'Expired Test',
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow()
+
+    const expiredSessionId = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
+    await db
+      .insertInto('session')
+      .values({
+        id: expiredSessionId,
+        user_id: user.id,
+        expires_at: new Date(Date.now() - 1000),
+      })
+      .execute()
+
+    const session = await getSession(db, expiredSessionId)
+    expect(session).toBeNull()
+
+    await db.deleteFrom('users').where('id', '=', user.id).execute()
   })
 })
 
