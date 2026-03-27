@@ -52,9 +52,11 @@ export async function action({ request, context }: Route.ActionArgs) {
   if (!res.ok || body.error) {
     const message = body.error?.message ?? 'Registration failed'
     if (message === 'Email already in use') {
-      return { errors: { email: message } as Record<string, string> }
+      const errors: Record<string, string> = { email: message }
+      return { errors }
     }
-    return { errors: { form: message } as Record<string, string> }
+    const errors: Record<string, string> = { form: message }
+    return { errors }
   }
 
   const setCookies = res.headers.getSetCookie()

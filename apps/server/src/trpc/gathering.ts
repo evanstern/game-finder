@@ -1,4 +1,8 @@
 import { TRPCError } from '@trpc/server'
+
+function buildLocationLabel(city: string | null, state: string | null, zip: string): string {
+  return city && state ? `${city}, ${state}` : zip
+}
 import { z } from 'zod'
 import {
   createGatheringSchema,
@@ -235,29 +239,26 @@ export const gatheringRouter = createRouter({
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Gathering not found' })
       }
 
-      const games = await fetchGamesForGathering(ctx, row.id)
-
-      const countResult = await ctx.db
-        .selectFrom('gathering_participant')
-        .select(sql<number>`count(*)`.as('count'))
-        .where('gathering_id', '=', row.id)
-        .where('status', '=', 'joined')
-        .executeTakeFirstOrThrow()
-
-      let currentUserStatus: 'joined' | 'waitlisted' | null = null
-      if (ctx.userId) {
-        const participant = await ctx.db
+      const [games, countResult, participant] = await Promise.all([
+        fetchGamesForGathering(ctx, row.id),
+        ctx.db
           .selectFrom('gathering_participant')
-          .select('status')
+          .select(sql<number>`count(*)`.as('count'))
           .where('gathering_id', '=', row.id)
-          .where('user_id', '=', ctx.userId)
-          .executeTakeFirst()
-        currentUserStatus = participant?.status ?? null
-      }
+          .where('status', '=', 'joined')
+          .executeTakeFirstOrThrow(),
+        ctx.userId
+          ? ctx.db
+              .selectFrom('gathering_participant')
+              .select('status')
+              .where('gathering_id', '=', row.id)
+              .where('user_id', '=', ctx.userId)
+              .executeTakeFirst()
+          : Promise.resolve(undefined),
+      ])
+      const currentUserStatus = participant?.status ?? null
 
-      const locationLabel = row.location_city && row.location_state
-        ? `${row.location_city}, ${row.location_state}`
-        : row.zip_code
+      const locationLabel = buildLocationLabel(row.location_city, row.location_state, row.zip_code)
 
       return {
         ...serializeGathering(row),
@@ -713,7 +714,7 @@ export const gatheringRouter = createRouter({
         status: row.status,
         hostDisplayName: row.host_display_name,
         games: gamesMap.get(row.id) ?? [],
-        locationLabel: `${row.location_city}, ${row.location_state}`,
+        locationLabel: buildLocationLabel(row.location_city, row.location_state, row.zip_code),
       }))
 
       return {
