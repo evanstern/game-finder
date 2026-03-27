@@ -1,11 +1,11 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 
+import { hashPassword, verifyPassword } from '../src/auth/password.js'
 import {
   createSession,
   deleteSession,
   getSession,
 } from '../src/auth/session.js'
-import { hashPassword, verifyPassword } from '../src/auth/password.js'
 import { db } from '../src/db.js'
 
 beforeEach(async () => {
@@ -38,7 +38,7 @@ describe('Session helpers', () => {
       .where('id', '=', sessionId)
       .executeTakeFirst()
     expect(row).toBeTruthy()
-    expect(row!.user_id).toBe(user.id)
+    expect(row?.user_id).toBe(user.id)
 
     await db.deleteFrom('users').where('id', '=', user.id).execute()
   })

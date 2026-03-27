@@ -4,10 +4,7 @@ const SESSION_TTL_DAYS = 7
 
 type Db = typeof DbType
 
-export async function createSession(
-  db: Db,
-  userId: string,
-): Promise<string> {
+export async function createSession(db: Db, userId: string): Promise<string> {
   const expiresAt = new Date()
   expiresAt.setDate(expiresAt.getDate() + SESSION_TTL_DAYS)
 
@@ -35,9 +32,6 @@ export async function getSession(
   return { userId: session.user_id }
 }
 
-export async function deleteSession(
-  db: Db,
-  sessionId: string,
-): Promise<void> {
+export async function deleteSession(db: Db, sessionId: string): Promise<void> {
   await db.deleteFrom('session').where('id', '=', sessionId).execute()
 }

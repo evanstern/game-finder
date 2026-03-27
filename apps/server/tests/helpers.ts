@@ -1,9 +1,9 @@
-import { appRouter } from '../src/trpc/router.js'
-import { createContext } from '../src/trpc/context.js'
-import { db } from '../src/db.js'
-import { redis } from '../src/redis.js'
 import { hashPassword } from '../src/auth/password.js'
 import { createSession } from '../src/auth/session.js'
+import { db } from '../src/db.js'
+import { redis } from '../src/redis.js'
+import { createContext } from '../src/trpc/context.js'
+import { appRouter } from '../src/trpc/router.js'
 
 export { db, redis }
 
@@ -17,13 +17,11 @@ export async function createTestCaller(cookie?: string) {
   return { caller, resHeaders }
 }
 
-export async function createTestUser(
-  overrides?: {
-    email?: string
-    password?: string
-    displayName?: string
-  },
-) {
+export async function createTestUser(overrides?: {
+  email?: string
+  password?: string
+  displayName?: string
+}) {
   const email = overrides?.email ?? 'test@example.com'
   const password = overrides?.password ?? 'password123'
   const displayName = overrides?.displayName ?? 'Test User'
@@ -47,20 +45,68 @@ export async function createAuthenticatedCaller(userId: string) {
 
 export async function seedGames() {
   const games = [
-    { name: 'Catan', type: 'board_game' as const, description: 'Trade and build.', min_players: 3, max_players: 4 },
-    { name: 'D&D 5e', type: 'ttrpg' as const, description: 'Classic TTRPG.', min_players: 3, max_players: 6 },
-    { name: 'Magic: The Gathering', type: 'card_game' as const, description: 'Card battler.', min_players: 2, max_players: 4 },
+    {
+      name: 'Catan',
+      type: 'board_game' as const,
+      description: 'Trade and build.',
+      min_players: 3,
+      max_players: 4,
+    },
+    {
+      name: 'D&D 5e',
+      type: 'ttrpg' as const,
+      description: 'Classic TTRPG.',
+      min_players: 3,
+      max_players: 6,
+    },
+    {
+      name: 'Magic: The Gathering',
+      type: 'card_game' as const,
+      description: 'Card battler.',
+      min_players: 2,
+      max_players: 4,
+    },
   ]
   return db.insertInto('game').values(games).returningAll().execute()
 }
 
 export async function seedZipCodes() {
   const zips = [
-    { zip_code: '10001', city: 'New York', state: 'NY', latitude: 40.7484, longitude: -73.9967 },
-    { zip_code: '10002', city: 'New York', state: 'NY', latitude: 40.7157, longitude: -73.9863 },
-    { zip_code: '11201', city: 'Brooklyn', state: 'NY', latitude: 40.6892, longitude: -73.9857 },
-    { zip_code: '90210', city: 'Beverly Hills', state: 'CA', latitude: 34.0901, longitude: -118.4065 },
-    { zip_code: '60601', city: 'Chicago', state: 'IL', latitude: 41.8819, longitude: -87.6278 },
+    {
+      zip_code: '10001',
+      city: 'New York',
+      state: 'NY',
+      latitude: 40.7484,
+      longitude: -73.9967,
+    },
+    {
+      zip_code: '10002',
+      city: 'New York',
+      state: 'NY',
+      latitude: 40.7157,
+      longitude: -73.9863,
+    },
+    {
+      zip_code: '11201',
+      city: 'Brooklyn',
+      state: 'NY',
+      latitude: 40.6892,
+      longitude: -73.9857,
+    },
+    {
+      zip_code: '90210',
+      city: 'Beverly Hills',
+      state: 'CA',
+      latitude: 34.0901,
+      longitude: -118.4065,
+    },
+    {
+      zip_code: '60601',
+      city: 'Chicago',
+      state: 'IL',
+      latitude: 41.8819,
+      longitude: -87.6278,
+    },
   ]
   await db.insertInto('zip_code_location').values(zips).execute()
   return zips
@@ -92,9 +138,10 @@ export async function createTestGathering(
       zip_code: overrides?.zipCode ?? '10001',
       schedule_type: overrides?.scheduleType ?? 'weekly',
       starts_at: overrides?.startsAt ?? tomorrow,
-      next_occurrence_at: overrides?.nextOccurrenceAt !== undefined
-        ? overrides.nextOccurrenceAt
-        : tomorrow,
+      next_occurrence_at:
+        overrides?.nextOccurrenceAt !== undefined
+          ? overrides.nextOccurrenceAt
+          : tomorrow,
       status: overrides?.status ?? 'active',
       max_players: overrides?.maxPlayers ?? 6,
     })
@@ -104,10 +151,12 @@ export async function createTestGathering(
   if (gameIds.length > 0) {
     await db
       .insertInto('gathering_game')
-      .values(gameIds.map((gameId) => ({
-        gathering_id: gathering.id,
-        game_id: gameId,
-      })))
+      .values(
+        gameIds.map((gameId) => ({
+          gathering_id: gathering.id,
+          game_id: gameId,
+        })),
+      )
       .execute()
   }
 
