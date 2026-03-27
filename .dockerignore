@@ -1,0 +1,9 @@
+node_modules
+.git
+.github
+**/*.md
+docs
+apps/*/build
+apps/*/dist
+.env*
+.claude
