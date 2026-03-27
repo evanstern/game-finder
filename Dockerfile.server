@@ -12,7 +12,7 @@ RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
 COPY . .
-RUN pnpm build
+RUN pnpm --filter @game-finder/server... build
 
 FROM base AS runtime
 WORKDIR /app
