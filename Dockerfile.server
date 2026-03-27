@@ -33,4 +33,4 @@ COPY --from=build /app/packages/shared/package.json ./packages/shared/
 COPY --from=build /app/pnpm-workspace.yaml ./
 
 EXPOSE 4000
-CMD ["node", "--import", "tsx", "apps/server/dist/src/index.js"]
+CMD ["tsx", "apps/server/dist/src/index.js"]
