@@ -70,6 +70,13 @@ export interface ZipCodeLocationTable {
   longitude: number
 }
 
+export interface SessionTable {
+  id: Generated<string>
+  user_id: string
+  created_at: Generated<Date>
+  expires_at: Date
+}
+
 export interface Database {
   users: UsersTable
   game: GameTable
@@ -78,4 +85,5 @@ export interface Database {
   gathering_participant: GatheringParticipantTable
   zip_code_location: ZipCodeLocationTable
   friendship: FriendshipTable
+  session: SessionTable
 }

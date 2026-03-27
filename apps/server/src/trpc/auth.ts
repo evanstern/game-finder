@@ -41,7 +41,7 @@ export const authRouter = createRouter({
         .returningAll()
         .executeTakeFirstOrThrow()
 
-      const sessionId = await createSession(ctx.redis, user.id)
+      const sessionId = await createSession(ctx.db, user.id)
       ctx.resHeaders.append('set-cookie', serializeSessionCookie(sessionId))
 
       return { user: serializeUser(user) }
@@ -71,14 +71,14 @@ export const authRouter = createRouter({
         })
       }
 
-      const sessionId = await createSession(ctx.redis, user.id)
+      const sessionId = await createSession(ctx.db, user.id)
       ctx.resHeaders.append('set-cookie', serializeSessionCookie(sessionId))
 
       return { user: serializeUser(user) }
     }),
 
   logout: protectedProcedure.mutation(async ({ ctx }) => {
-    await deleteSession(ctx.redis, ctx.sessionId)
+    await deleteSession(ctx.db, ctx.sessionId)
     ctx.resHeaders.append('set-cookie', serializeClearSessionCookie())
     return { success: true }
   }),
