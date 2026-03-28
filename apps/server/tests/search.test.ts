@@ -41,7 +41,7 @@ describe('gathering.search', () => {
     })
 
     const result = await caller.gathering.search({
-      zipCode: '10001',
+      location: { type: 'zip', zipCode: '10001' },
       radius: 25,
     })
 
@@ -63,7 +63,7 @@ describe('gathering.search', () => {
     })
 
     const result = await caller.gathering.search({
-      zipCode: '10001',
+      location: { type: 'zip', zipCode: '10001' },
       radius: 25,
     })
 
@@ -86,7 +86,7 @@ describe('gathering.search', () => {
     })
 
     const result = await caller.gathering.search({
-      zipCode: '10001',
+      location: { type: 'zip', zipCode: '10001' },
       radius: 25,
       query: 'Board Game',
     })
@@ -109,7 +109,7 @@ describe('gathering.search', () => {
     }) // linked to D&D
 
     const result = await caller.gathering.search({
-      zipCode: '10001',
+      location: { type: 'zip', zipCode: '10001' },
       radius: 25,
       query: 'Catan',
     })
@@ -132,7 +132,7 @@ describe('gathering.search', () => {
     }) // ttrpg
 
     const result = await caller.gathering.search({
-      zipCode: '10001',
+      location: { type: 'zip', zipCode: '10001' },
       radius: 25,
       gameTypes: ['ttrpg'],
     })
@@ -159,7 +159,7 @@ describe('gathering.search', () => {
     })
 
     const result = await caller.gathering.search({
-      zipCode: '10001',
+      location: { type: 'zip', zipCode: '10001' },
       radius: 25,
       query: 'Night',
       gameTypes: ['board_game'],
@@ -188,7 +188,7 @@ describe('gathering.search', () => {
     })
 
     const page1 = await caller.gathering.search({
-      zipCode: '10001',
+      location: { type: 'zip', zipCode: '10001' },
       radius: 25,
       pageSize: 2,
       page: 1,
@@ -200,7 +200,7 @@ describe('gathering.search', () => {
     expect(page1.pageSize).toBe(2)
 
     const page2 = await caller.gathering.search({
-      zipCode: '10001',
+      location: { type: 'zip', zipCode: '10001' },
       radius: 25,
       pageSize: 2,
       page: 2,
@@ -213,7 +213,7 @@ describe('gathering.search', () => {
 
   it('returns empty results when no gatherings match', async () => {
     const result = await caller.gathering.search({
-      zipCode: '10001',
+      location: { type: 'zip', zipCode: '10001' },
       radius: 5,
     })
 
@@ -237,7 +237,7 @@ describe('gathering.search', () => {
     })
 
     const result = await caller.gathering.search({
-      zipCode: '10001',
+      location: { type: 'zip', zipCode: '10001' },
       radius: 25,
     })
 
@@ -261,7 +261,7 @@ describe('gathering.search', () => {
     })
 
     const result = await caller.gathering.search({
-      zipCode: '10001',
+      location: { type: 'zip', zipCode: '10001' },
       radius: 25,
     })
 
@@ -271,7 +271,10 @@ describe('gathering.search', () => {
 
   it('throws BAD_REQUEST for an invalid ZIP code', async () => {
     await expect(
-      caller.gathering.search({ zipCode: '00000', radius: 25 }),
+      caller.gathering.search({
+        location: { type: 'zip', zipCode: '00000' },
+        radius: 25,
+      }),
     ).rejects.toThrow('Invalid ZIP code')
   })
 
@@ -296,7 +299,7 @@ describe('gathering.search', () => {
     })
 
     const result = await caller.gathering.search({
-      zipCode: '10001',
+      location: { type: 'zip', zipCode: '10001' },
       radius: 25,
       sortBy: 'next_session',
     })
@@ -316,7 +319,7 @@ describe('gathering.search', () => {
     })
 
     const result = await caller.gathering.search({
-      zipCode: '10001',
+      location: { type: 'zip', zipCode: '10001' },
       radius: 25,
     })
 

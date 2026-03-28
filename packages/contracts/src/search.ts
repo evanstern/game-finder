@@ -1,8 +1,18 @@
 import { z } from 'zod'
 import { gameTypeSchema } from './game.js'
 
+export const searchLocationSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('zip'), zipCode: z.string().regex(/^\d{5}$/) }),
+  z.object({
+    type: z.literal('coordinates'),
+    lat: z.number(),
+    lng: z.number(),
+  }),
+])
+
 export const searchGatheringsSchema = z.object({
-  zipCode: z.string().regex(/^\d{5}$/, 'Must be a 5-digit ZIP code'),
+  location: searchLocationSchema,
+  locationLabel: z.string().optional(),
   radius: z.number().positive(),
   query: z.string().trim().optional(),
   gameTypes: z.array(gameTypeSchema).optional(),
@@ -41,9 +51,11 @@ export const searchGatheringsOutputSchema = z.object({
   searchLocation: z.object({
     city: z.string(),
     state: z.string(),
+    label: z.string().optional(),
   }),
 })
 
+export type SearchLocation = z.infer<typeof searchLocationSchema>
 export type SearchGatheringsInput = z.infer<typeof searchGatheringsSchema>
 export type SearchResult = z.infer<typeof searchResultSchema>
 export type SearchGatheringsOutput = z.infer<

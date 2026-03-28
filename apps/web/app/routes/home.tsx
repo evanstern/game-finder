@@ -4,6 +4,11 @@ import { Input } from '@game-finder/ui/components/input'
 import { Logo } from '@game-finder/ui/components/logo'
 import { Fragment, useState } from 'react'
 import { useNavigate, useRouteLoaderData, useSearchParams } from 'react-router'
+import {
+  LocationInput,
+  type LocationValue,
+  locationValueToParams,
+} from '../components/location-input.js'
 import { MapBackground } from '../components/map-background.js'
 
 const POPULAR_TAGS = [
@@ -15,64 +20,68 @@ const POPULAR_TAGS = [
 ]
 
 const HOW_IT_WORKS = [
-  { icon: '🔍', label: 'Search', desc: 'Find games by zip code & type' },
+  { icon: '🔍', label: 'Search', desc: 'Find games by location & type' },
   { icon: '📜', label: 'Browse', desc: 'Read details & check availability' },
   { icon: '⚔', label: 'Join', desc: 'Contact the host & roll initiative' },
 ]
 
 function SearchCard() {
-  const [zip, setZip] = useState('')
+  const [location, setLocation] = useState<LocationValue>({
+    mode: 'text',
+    text: '',
+  })
   const [query, setQuery] = useState('')
-  const [zipError, setZipError] = useState('')
   const navigate = useNavigate()
+
+  function buildLocationParams(): URLSearchParams {
+    const params = new URLSearchParams()
+    const locParams = locationValueToParams(location)
+    for (const [key, value] of Object.entries(locParams)) {
+      if (value) params.set(key, value)
+    }
+    return params
+  }
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()
-    if (!zip || !/^\d{5}$/.test(zip)) {
-      setZipError('Please enter a valid 5-digit ZIP code')
-      return
-    }
-    setZipError('')
-    const params = new URLSearchParams()
-    params.set('zip', zip)
+    const locParams = locationValueToParams(location)
+    if (!locParams.zip && !locParams.lat && !locParams.address) return
+
+    const params = buildLocationParams()
     if (query) params.set('q', query)
     navigate(`/search?${params.toString()}`)
   }
 
   function handleTagClick(tag: string) {
-    const params = new URLSearchParams()
-    if (zip) params.set('zip', zip)
+    const locParams = locationValueToParams(location)
+    if (!locParams.zip && !locParams.lat && !locParams.address) return
+    const params = buildLocationParams()
     params.set('q', tag)
     navigate(`/search?${params.toString()}`)
   }
 
   return (
     <div className="bg-white/[0.04] border border-[rgba(255,191,71,0.15)] rounded-xl p-5 max-w-[420px] mx-auto">
-      <form
-        onSubmit={handleSearch}
-        className="flex flex-col md:flex-row gap-2 mb-3"
-      >
-        <Input
-          type="text"
-          placeholder="Zip Code"
-          maxLength={5}
-          value={zip}
-          onChange={(e) => setZip(e.target.value)}
-          className="w-full md:w-28"
+      <form onSubmit={handleSearch} className="flex flex-col gap-2 mb-3">
+        <LocationInput
+          value={location}
+          onChange={setLocation}
+          inputClassName="w-full"
         />
-        <Input
-          type="text"
-          placeholder="Game type..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="flex-1"
-        />
-        <Button type="submit" size="sm">
-          Search
-        </Button>
+        <div className="flex gap-2">
+          <Input
+            type="text"
+            placeholder="Game type..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="flex-1"
+          />
+          <Button type="submit" size="sm">
+            Search
+          </Button>
+        </div>
       </form>
 
-      {zipError && <p className="text-sm text-destructive mb-2">{zipError}</p>}
       <div className="flex flex-wrap gap-1.5">
         {POPULAR_TAGS.map((tag) => (
           <Badge
