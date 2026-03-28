@@ -670,24 +670,46 @@ export const gatheringRouter = createRouter({
   search: publicProcedure
     .input(searchGatheringsSchema)
     .query(async ({ input, ctx }) => {
-      const { zipCode, radius, query, gameTypes, sortBy, page, pageSize } =
-        input
+      const {
+        location,
+        locationLabel,
+        radius,
+        query,
+        gameTypes,
+        sortBy,
+        page,
+        pageSize,
+      } = input
 
-      const searchZip = await ctx.db
-        .selectFrom('zip_code_location')
-        .selectAll()
-        .where('zip_code', '=', zipCode)
-        .executeTakeFirst()
+      let lat: number
+      let lng: number
+      let searchCity: string
+      let searchState: string
 
-      if (!searchZip) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Invalid ZIP code',
-        })
+      if (location.type === 'zip') {
+        const searchZip = await ctx.db
+          .selectFrom('zip_code_location')
+          .selectAll()
+          .where('zip_code', '=', location.zipCode)
+          .executeTakeFirst()
+
+        if (!searchZip) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Invalid ZIP code',
+          })
+        }
+
+        lat = Number(searchZip.latitude)
+        lng = Number(searchZip.longitude)
+        searchCity = searchZip.city
+        searchState = searchZip.state
+      } else {
+        lat = location.lat
+        lng = location.lng
+        searchCity = ''
+        searchState = ''
       }
-
-      const lat = Number(searchZip.latitude)
-      const lng = Number(searchZip.longitude)
 
       const distanceExpr = sql<number>`(
         3959 * acos(
@@ -824,8 +846,9 @@ export const gatheringRouter = createRouter({
         page,
         pageSize,
         searchLocation: {
-          city: searchZip.city,
-          state: searchZip.state,
+          city: searchCity,
+          state: searchState,
+          label: locationLabel,
         },
       }
     }),

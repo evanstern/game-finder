@@ -32,7 +32,7 @@ fi
 update_env() {
   local key="$1" value="$2"
   if grep -q "^${key}=" .env; then
-    sed -i '' "s/^${key}=.*/${key}=${value}/" .env
+    sed -i '' "s|^${key}=.*|${key}=${value}|" .env
   else
     echo "${key}=${value}" >> .env
   fi

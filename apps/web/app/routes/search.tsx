@@ -19,10 +19,16 @@ import {
   SelectValue,
 } from '@game-finder/ui/components/select'
 import { useState } from 'react'
-import { Link, useNavigation, useSearchParams } from 'react-router'
+import { Link, redirect, useNavigation, useSearchParams } from 'react-router'
 import { ClientDate, SCHEDULE_LABELS } from '../components/client-date.js'
+import {
+  LocationInput,
+  type LocationValue,
+  locationValueToParams,
+} from '../components/location-input.js'
 import { MapBackground } from '../components/map-background.js'
 import { createServerTRPC } from '../trpc/server.js'
+import { geocodeAddress } from '../utils/geocode.server.js'
 import type { Route } from './+types/search.js'
 
 type GameType = 'board_game' | 'ttrpg' | 'card_game'
@@ -38,9 +44,53 @@ const RADIUS_OPTIONS = [5, 10, 25, 50]
 export async function loader({ request, context }: Route.LoaderArgs) {
   const ctx = context as { cookie?: string }
   const url = new URL(request.url)
-  const zip = url.searchParams.get('zip') ?? ''
 
-  if (!zip) return { results: null }
+  const lat = url.searchParams.get('lat')
+  const lng = url.searchParams.get('lng')
+  const locationLabel = url.searchParams.get('locationLabel') ?? undefined
+  const zip = url.searchParams.get('zip') ?? ''
+  const address = url.searchParams.get('address') ?? ''
+
+  if (address) {
+    let geocoded: Awaited<ReturnType<typeof geocodeAddress>>
+    try {
+      geocoded = await geocodeAddress(address)
+    } catch {
+      return {
+        results: null,
+        error: 'Location lookup failed. Please try again.',
+      }
+    }
+    if (!geocoded) {
+      return {
+        results: null,
+        error: `Could not find location "${address}". Try a zip code or more specific address.`,
+      }
+    }
+    const next = new URL(url)
+    next.searchParams.delete('address')
+    next.searchParams.set('lat', String(geocoded.lat))
+    next.searchParams.set('lng', String(geocoded.lng))
+    next.searchParams.set('locationLabel', geocoded.label)
+    throw redirect(next.pathname + next.search)
+  }
+
+  const hasLocation = (lat && lng) || zip
+  if (!hasLocation) return { results: null, error: null }
+
+  let location:
+    | { type: 'coordinates'; lat: number; lng: number }
+    | { type: 'zip'; zipCode: string }
+  if (lat && lng) {
+    const latNum = Number(lat)
+    const lngNum = Number(lng)
+    if (!Number.isFinite(latNum) || !Number.isFinite(lngNum)) {
+      return { results: null, error: 'Invalid location coordinates.' }
+    }
+    location = { type: 'coordinates', lat: latNum, lng: lngNum }
+  } else {
+    location = { type: 'zip', zipCode: zip }
+  }
 
   const trpc = createServerTRPC(ctx.cookie ?? '')
   const radius = Number(url.searchParams.get('radius')) || 25
@@ -56,7 +106,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
   try {
     const results = await trpc.gathering.search.query({
-      zipCode: zip,
+      location,
+      locationLabel,
       radius,
       query: query || undefined,
       gameTypes: gameTypes && gameTypes.length > 0 ? gameTypes : undefined,
@@ -68,13 +119,13 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     return { results, error: null }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Search failed'
-    const isInvalidZip =
+    const isInvalidLocation =
       message.toLowerCase().includes('zip') ||
       message.toLowerCase().includes('location')
     return {
       results: null,
-      error: isInvalidZip
-        ? `Invalid ZIP code "${zip}". Please enter a valid 5-digit US ZIP code.`
+      error: isInvalidLocation
+        ? 'Could not find that location. Please try a different search.'
         : message,
     }
   }
@@ -95,11 +146,46 @@ function GameTypeBadge({ type }: { type: GameType }) {
   )
 }
 
+function formatSearchLocation(searchLocation: {
+  city: string
+  state: string
+  label?: string
+}): string {
+  if (searchLocation.label) return searchLocation.label
+  if (searchLocation.city && searchLocation.state) {
+    return `${searchLocation.city}, ${searchLocation.state}`
+  }
+  return 'your area'
+}
+
+function locationValueFromParams(searchParams: URLSearchParams): LocationValue {
+  const lat = searchParams.get('lat')
+  const lng = searchParams.get('lng')
+  const locationLabel = searchParams.get('locationLabel')
+  const zip = searchParams.get('zip')
+
+  if (lat && lng) {
+    if (locationLabel && locationLabel !== 'Current Location') {
+      return { mode: 'text', text: locationLabel }
+    }
+    return {
+      mode: 'geolocation',
+      lat: Number(lat),
+      lng: Number(lng),
+    }
+  }
+
+  if (locationLabel) {
+    return { mode: 'text', text: locationLabel }
+  }
+
+  return { mode: 'text', text: zip ?? '' }
+}
+
 export default function SearchPage({ loaderData }: Route.ComponentProps) {
   const navigation = useNavigation()
   const [searchParams, setSearchParams] = useSearchParams()
 
-  const urlZip = searchParams.get('zip') ?? ''
   const urlRadius = Number(searchParams.get('radius')) || 25
   const urlQuery = searchParams.get('q') ?? ''
   const urlTypes = searchParams.get('types')?.split(',').filter(Boolean) as
@@ -110,11 +196,15 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
     | 'next_session'
   const urlPage = Number(searchParams.get('page')) || 1
 
-  const [zipInput, setZipInput] = useState(urlZip)
+  const [locationInput, setLocationInput] = useState<LocationValue>(() =>
+    locationValueFromParams(searchParams),
+  )
   const [radiusInput, setRadiusInput] = useState(urlRadius)
   const [queryInput, setQueryInput] = useState(urlQuery)
 
-  const hasSearched = !!urlZip
+  const hasSearched =
+    !!searchParams.get('zip') ||
+    !!(searchParams.get('lat') && searchParams.get('lng'))
   const isLoading = navigation.state === 'loading'
   const data = loaderData.results
   const searchError = loaderData.error
@@ -133,13 +223,23 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()
-    if (!zipInput || !/^\d{5}$/.test(zipInput)) return
-    updateSearchParams({
-      zip: zipInput,
-      radius: String(radiusInput),
-      q: queryInput || undefined,
-      page: '1',
-    })
+    const locParams = locationValueToParams(locationInput)
+    if (!locParams.zip && !locParams.lat && !locParams.address) return
+
+    const newParams = new URLSearchParams()
+    for (const [key, value] of Object.entries(locParams)) {
+      if (value) newParams.set(key, value)
+    }
+    newParams.set('radius', String(radiusInput))
+    if (queryInput) newParams.set('q', queryInput)
+
+    const currentTypes = searchParams.get('types')
+    if (currentTypes) newParams.set('types', currentTypes)
+    const currentSort = searchParams.get('sort')
+    if (currentSort) newParams.set('sort', currentSort)
+
+    newParams.set('page', '1')
+    setSearchParams(newParams)
   }
 
   function toggleGameType(type: GameType) {
@@ -171,19 +271,11 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
         <form onSubmit={handleSearch} className="mb-8">
           <div className="flex flex-wrap items-end gap-3">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="zip" className="text-xs text-muted-foreground">
-                ZIP Code
-              </Label>
-              <Input
-                id="zip"
-                type="text"
-                placeholder="e.g. 10001"
-                value={zipInput}
-                onChange={(e) => setZipInput(e.target.value)}
-                className="w-28"
-                maxLength={5}
-                pattern="\d{5}"
-                required
+              <Label className="text-xs text-muted-foreground">Location</Label>
+              <LocationInput
+                value={locationInput}
+                onChange={setLocationInput}
+                inputClassName="w-48"
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -231,7 +323,7 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
         {!hasSearched && (
           <div className="flex min-h-[40vh] items-center justify-center">
             <p className="text-center text-muted-foreground">
-              Enter your ZIP code to find tabletop gatherings near you.
+              Enter a location to find tabletop gatherings near you.
             </p>
           </div>
         )}
@@ -319,7 +411,7 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
                 <>
                   <p className="mb-4 text-sm text-muted-foreground">
                     {data.total} gathering{data.total !== 1 ? 's' : ''} near{' '}
-                    {data.searchLocation.city}, {data.searchLocation.state}
+                    {formatSearchLocation(data.searchLocation)}
                   </p>
 
                   {data.gatherings.length === 0 ? (
