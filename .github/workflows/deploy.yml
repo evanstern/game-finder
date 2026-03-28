@@ -184,4 +184,4 @@ jobs:
             --region ${{ env.REGION }} \
             --platform managed \
             --allow-unauthenticated \
-            --set-env-vars "SERVER_URL=${{ steps.server-url.outputs.url }}"
+            --set-env-vars "SERVER_URL=${{ steps.server-url.outputs.url }},GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}"
